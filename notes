@@ -104,3 +104,19 @@ advance-game (adjust whether the game is considered early, mid, or late)
 
 ;strategy is about what desired board result will look like in x turns
 ;tactics are the methods that can be applied to zone-sets to try to achieve a strategy
+
+
+;;program flow
+...hard code turn 1-10 strategy...
+then...
+pick strategy for each continent (at random at first, then based on past successes of the strat)
+assign priorities to each zone based on the strategy
+pick tactics recursively for each zone in the continent
+
+
+
+
+;;testing
+create world (NA)
+pick some strategy (raise income)
+assign tactics to each zone (take high plat areas)
