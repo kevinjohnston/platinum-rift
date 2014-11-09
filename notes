@@ -1,0 +1,106 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; INPUT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ playerCount
+ myid
+ zoneCount
+ linkCount
+loop zoneCount
+ zoneId
+ platinumSource
+loop linkCount ;;tells how zones are connected
+ zone1
+ zone2
+
+ platinum ;;my current plat
+loop zoneCount
+ zId ;;zone id
+ ownerId ;;current owner of zone or -1
+ podsP0
+ podsP1
+ podsP2
+ podsP3
+
+
+
+;;strategy types
+random -- monte carlo, search win (may be hard to seed choices, opponent won't play randomly)
+weighted priorities -- hardcoded weights for wanting to control continents, reducing liberties, maximizing income, minimizing enemy territory, etc
+tit for tat -- respond to opponents apparent strategy (erasers to track and follow opponents pods)
+opportunist -- acts randomly but tries to identify weak spots in opponents position (i.e. isolated easily trapped pod)
+multi-armed-general -- tries different strategies at random and tries to converge on the one that provides this biggest percent lead over the opponent
+
+;;;;;helper code
+;;in game
+traveling salesman -- move between each platinum node as quickly as possible
+advisor -- evaluates postion (i.e. decides if you have high or low income, weak or strong board positions)
+rest -- be able to 'rest' board evaluation functions for a number of turns to spend processor time elsewhere
+
+;;out of game
+script to combine source code files in a directory for easy copy/paste to browser
+
+
+
+;;;;Abstractions
+zone-sets -- groups of territories (or single territories)
+strategies -- functions that change overview
+tactics -- functions that can change zone-sets
+advisors -- functions that can evaluate zone-sets
+
+
+;;simple strategies
+go straight for biggest payoff platinum nodes
+capture small continents early for secure income
+capture and hold chokepoints between continents
+penetrate opponents territory in pairs to slow defenses
+select areas to cede to an opponent and aggressively target others
+maximize territory to surface area
+go after less productive platinum square to reduce competition
+
+
+
+;;zone-set
+{
+:id (zone-id or  1000+)
+:sub-zones #{ (set of zone-ids)}
+:priority (int to indicate how important this territory is to the strategy gets re-evaluated from time to time)
+:last-eval (turn priority was last set)
+:value (accumulated total of platinum bars in all sub-zones)
+:total-liberties (total number of adjacent zones)
+:open-liberties (number of adjacent zones that aren't controlled by you)
+}
+
+
+;;strategies
+{
+  :last-eval (last turn strategy was evaluated)
+  :evaluation (num last evaulation of overall strategy by advisor)
+
+}
+
+(fn strat1
+ [zone-set ;;the zone set to apply the strat to
+ ]
+)
+
+;strat-list:
+defend (defend sensitive positions)
+erase (follow enemy pods around taking old territory)
+blitz (run as deep into enemy territory as possible)
+greed (take as many valuable resource locations as possible as quickly as possible)
+herd (try to force enemies to move to bad positions)
+save (stockpile plat)
+surge (spend all plat)
+cede (decide not to pursue certain zones)
+
+
+
+
+
+
+;;misc helper fun
+forget-about-it (remove continents that are claimed entirely by me or by other players)
+advance-game (adjust whether the game is considered early, mid, or late)
+
+
+
+;strategy is about what desired board result will look like in x turns
+;tactics are the methods that can be applied to zone-sets to try to achieve a strategy
