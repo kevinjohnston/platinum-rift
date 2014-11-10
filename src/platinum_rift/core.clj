@@ -13,6 +13,6 @@
   (world/reset-world)
   ;;pick a strategy
   (let [strat (strat/pick-strat)]
-  (if debug (name strat)))
+    (if debug (name strat)))
   ;;pick tactics
   (println "Hello, World!"))

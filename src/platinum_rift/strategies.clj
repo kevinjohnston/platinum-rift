@@ -66,7 +66,9 @@
   (trials [strat] @inc-trials)
   (prioritize [strat zone] ))
 
-(extends? strategy income)
+;; (extends? strategy income)
+
+
 
 ;; (let [player1 {:platinum 20}]
 ;;   (evaluate (hoard.) {:platinum 20} {:platinum 30})

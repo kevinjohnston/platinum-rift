@@ -120,3 +120,112 @@ pick tactics recursively for each zone in the continent
 create world (NA)
 pick some strategy (raise income)
 assign tactics to each zone (take high plat areas)
+
+
+
+strategy -- set of functions to set desired game state
+tactic -- function to modify game state
+
+
+(defn tactic-place-unit-on-res [board-state]
+;;find highest value res
+;;place unit
+;;return new state
+)
+
+(defn tactic-move-unit-to-res [board-state]
+;;find highest value res
+;;find closest unit
+;;move unit towards res
+;;return new state
+)
+
+
+(loop [iterate-board-state current-state
+       acc-tactics []]
+(if (empty? (all-available-tactics))
+    acc-tactics
+(let [choosen-tactic (first (sort evaluate-board-state (all-available-tactics)))]
+(recur choosen-tactic-result
+    choosen-tactic))))
+
+;;accumlate best available tactics
+
+
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Alt approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+agenda -- priorities for game state (player metrics)
+personality -- quantifies how to treat metrics (enemies should be avoided,
+strategy -- priorities for board state (board metrics)
+tactics -- how to achive board state (considered strategy and personality)
+
+
+
+(fn was-agenda-successful?
+(loop [goals @goals
+       success 0] {:goal (fn [player-state] (>= 20 (:platinum player-state))) :priority [0-3] }
+   (recur
+ (next goals)
+(+ success
+  (* ((first (first goal)) player-state) priority))))
+
+
+
+
+personality
+{
+:aggressive 1-10
+:frugal 1-10
+:defensive 1-10
+:daring 1-10 (don't avoid enemy territory)
+}
+
+
+strategy
+{
+:maximize-territory 1-10
+:get-plat 1-10
+:minimize-liberties 1-10
+:exploit-weakness
+}
+
+(defprotocal tactics
+(filter-map [personality, strategy] "Function to adjust graph-map, removing occupied or near occupied territory")
+
+)
+
+
+
+
+
+ultimately all decisions boil down to moving things or placing things (or neither)
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Heat approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+create 'advisors' each evaluating a nodes importance (tactician, banker, defender, ...)
+advisors weights for each node sum or multiply to create a heat map
+iterate over available actions such as placing new pods or moving units and review which results in biggest gain, apply and eval next action
+
+
+(advise advisor @global-map) ;;returns vector of vectors, one for each game node giving a priority to the nodes [[:node-id :priority-num] [...]...]
+(sum-advice)
+(while has-more-actions
+    (do-best (sort compare (move-nearest :highest-priority-node) (place-near :highest-priority-node))))
+(evalutate-game-state-better-worse-and-adjust-advisor-influence)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Monte Carlo approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+after first turn of placing pods on ten highest income sites (or some randomly amongst income sites)
+try to play as many games as possible and determine which moves are most likely to result in success, make random moves (possibly weighted towards moving to income squares), model opponent as always moving towards highest empty resource square
