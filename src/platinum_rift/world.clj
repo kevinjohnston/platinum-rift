@@ -93,10 +93,7 @@
      :priority 0
      :last-eval 0
      :value 0
-<<<<<<< Updated upstream
-=======
      :income (rand-int 6)
->>>>>>> Stashed changes
      :total-liberties 0
      :owner 0
      :open-liberties 0}
@@ -106,10 +103,7 @@
      :priority 0
      :last-eval 0
      :value 0
-<<<<<<< Updated upstream
-=======
      :income (rand-int 6)
->>>>>>> Stashed changes
      :total-liberties 0
      :owner 0
      :open-liberties 0}))
