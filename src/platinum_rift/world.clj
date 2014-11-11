@@ -5,11 +5,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MODEL THE GAME WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def next-zone-id (atom 1001))
-(def p1 (atom {}))
-(def p2 (atom {}))
-(def p3 (atom {}))
-(def p4 (atom {}))
 (def starting-plat 200)
 (def world (atom {}))
 (def graph-world (atom (graph/make-graph #{} {})))
@@ -30,20 +25,7 @@
     (if (< node-id num-nodes)
       (recur (inc node-id)
              (conj acc (new-node node-id))) ;;add another node
-      acc)
-
-    )
-  ;; (swap! next-zone-id #(if false % (num 1001)))
-  ;; (swap! world #(when %
-  ;;                 {:id 1000
-  ;;                  :sub-zones [(blank-NoA)]
-  ;;                  :priority 0
-  ;;                  :last-eval 0
-  ;;                  :value 0
-  ;;                  :total-liberties 0
-  ;;                  :owner 0
-  ;;                  :open-liberties 0}))
-  )
+      acc)))
 
 (defn add-income
   "Takes in the world (a vector of maps, one for each node)."
@@ -51,14 +33,11 @@
   (loop [res-remain max-res
          next-node (rand-int num-nodes)
          acc world]
-    (println "Resources remaining: " res-remain)
-    (println "Next-node " next-node)
     (if (= 0 res-remain)
       acc;;return the updated world
       (if (>= (:income (world next-node)) max-inc)
         (recur res-remain (rand-int num-nodes) acc)
-        (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))
-        ))))
+        (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))))))
 
 
 
@@ -67,13 +46,12 @@
   [node-id]
   {
    :id node-id
-   :source-value 0;;reset at beginning of every turn
-   :scalar-value 0;;recalculated from nearby source values every turn
+   :source-value 0 ;;reset at beginning of every turn
+   :scalar-value 0 ;;recalculated from nearby source values every turn
    :owner 0 ;;id of player controlling this
-   :open-liberties 0;;number of touching nodes owners by non-neutral enemy player
+   :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
    :total-liberties 0 ;;number of bordering nodes, never reset
-   :income 0
-   })
+   :income 0})
 
 
 
@@ -99,7 +77,7 @@
 (defn reset-world
   ""
   []
-  (blank-world)
+  (swap! world (fn [_] (add-income (blank-world))))
   (setup-graph-world)
   ;;find all shortest paths
   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
