@@ -5,6 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.0"]
                  [cider/cider-nrepl "0.7.0"]
+                 [net.mikera/vectorz-clj "0.26.2"]
+                 [incanter "1.2.2"]
                  [instaparse "1.3.4"]
                  [criterium "0.4.3"]]
   :main ^:skip-aot platinum-rift.core

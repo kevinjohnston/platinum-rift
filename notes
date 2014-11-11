@@ -214,9 +214,24 @@ ultimately all decisions boil down to moving things or placing things (or neithe
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Heat approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-create 'advisors' each evaluating a nodes importance (tactician, banker, defender, ...)
+create 'advisors' each evaluating a zone's importance (tactician, banker, defender, ...)
 advisors weights for each node sum or multiply to create a heat map
 iterate over available actions such as placing new pods or moving units and review which results in biggest gain, apply and eval next action
+
+
+advisors should use agents to assign priorities to each zone,
+advisors evaluation function should take a function to determine how to weight results
+higher priority zones should have a lower value for easy sorting
+
+
+error function to evaluate position (need some absolute)
+what is optimal
+;;higher stats than opponent
+;;most gain among advisors
+
+;;strategy effectiveness is running average of (* strategy-weight relative improvement of board position compared to opponent)
+
+
 
 
 (advise advisor @global-map) ;;returns vector of vectors, one for each game node giving a priority to the nodes [[:node-id :priority-num] [...]...]
@@ -224,6 +239,63 @@ iterate over available actions such as placing new pods or moving units and revi
 (while has-more-actions
     (do-best (sort compare (move-nearest :highest-priority-node) (place-near :highest-priority-node))))
 (evalutate-game-state-better-worse-and-adjust-advisor-influence)
+
+
+;;;;today
+working heat map of world
+$able to assign a value to each node via an advisor ;;create a priority-source field
+$able to adjust a node and nearby nodes based on some function ;;create a scalar field
+$able to make a point source and scalar adjustment (w/o side effects) to a map for quick comparison
+$have data structue to hold scalar values, vector values
+
+
+how to use advisor influence (weights source adjustment at node)
+how to adjust advisor influence
+ get delta for each player
+
+
+data points
+
+
+turn
+
+
+priority-source field
+scalar-field
+
+
+
+treat each advisor as assigning a temperature source to each node in the world.
+model how that temperature source affects surrounding territories
+apply temp effect to each territory
+
+
+summing functions
+distance between any two points can be given by seach function
+
+scalar field -- use advisor to assign scalar value to each point
+sort world by distance from point
+vector field -- use equation to model how a fields scalar value affects priority for itself and surrounding values
+
+
+
+;;;;DATA STRUCTURES
+;;player -- used to quantify how well a player is doing
+{
+:income
+:territories
+:liberties
+}
+
+
+
+;;;;EQUATIONS
+gradient descent
+error-calc for gradient descent
+importance of individual advisors as a function of time
+
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Monte Carlo approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -13,7 +13,10 @@
 (def starting-plat 200)
 (def world (atom {}))
 (def graph-world (atom (graph/make-graph #{} {})))
+(def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
 (def num-nodes 154)
+
+(declare reset-world)
 
 (defn blank-world
   "Returns a zone map representing the whole world."
@@ -26,6 +29,7 @@
                    :last-eval 0
                    :value 0
                    :total-liberties 0
+                   :owner 0
                    :open-liberties 0})))
 
 (defn blank-NoA
@@ -45,8 +49,13 @@
    :value 0;;(accumulated total of platinum bars in all sub-zones)
    :total-liberties 0;;(total number of adjacent zones)
    :open-liberties 0;;(number of adjacent zones that aren't controlled by you)
+   :owner 0
    })
 
+;; (defn get-shortest-path-graph
+;;   "Returns vector of nodes for shortest path between 1 and 2"
+;;   [graph p1 p2]
+;;   (first (filter #(= (last %) p2 ) )))
 
 
 (defn blank-SoA
@@ -84,7 +93,12 @@
      :priority 0
      :last-eval 0
      :value 0
+<<<<<<< Updated upstream
+=======
+     :income (rand-int 6)
+>>>>>>> Stashed changes
      :total-liberties 0
+     :owner 0
      :open-liberties 0}
 
     {:id ids
@@ -92,10 +106,13 @@
      :priority 0
      :last-eval 0
      :value 0
+<<<<<<< Updated upstream
+=======
+     :income (rand-int 6)
+>>>>>>> Stashed changes
      :total-liberties 0
-     :open-liberties 0}
-    )
-  )
+     :owner 0
+     :open-liberties 0}))
 
 (defn new-zone-id
   []
@@ -119,12 +136,39 @@
     (swap! p4 #(when % (new-player :p4)))))
 
 
+
+
 (defn reset-world
   ""
   []
   (blank-world)
   (setup-graph-world)
+  ;;find all shortest paths
+  (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
   (setup-players 2))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn find-short-paths
+  [graph]
+  (loop [node num-nodes
+         acc {}]
+    (if (< node 0)
+      acc
+      (recur (dec node)
+             (assoc acc node (sort-by count (graph/breadth-first-traversal-with-path graph node)))))))
+
+(defn nearby-nodes
+  "Returns all paths with distance <= radius from given origin-node."
+  [radius origin-node]
+  (filter (fn [_] (<= (count _) radius)) (@shortest-paths origin-node)))
+
+(defn get-shortest-path
+  "Returns vector of nodes for shortest path between node1 and node2"
+  [p1 p2]
+  (first (filter #(= (last %) p2) (@shortest-paths p1))))
+
+
 
 ;; {:id 1002,
 ;;  :sub-zones #{
@@ -222,7 +266,7 @@
    [3 4]
    [3 8]
 
-   [ 4 8]
+   [4 8]
    [4 9]
    [4 5]
 

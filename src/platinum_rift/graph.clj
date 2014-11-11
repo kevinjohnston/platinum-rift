@@ -299,7 +299,7 @@ nodes. The distance between a node and itself is 0. If a node is
 unreachable from another node, the distance between the nodes is -1."
   (let [hash (graph-distance-hash g)
         size (count (nodes g))]
-    (let [a (make-array (. Integer TYPE) size size)
+    (let [a (make-array (. Double TYPE) size size)
           nodes (nodes g)]
       (dotimes [i size]
         (dotimes [j size]
