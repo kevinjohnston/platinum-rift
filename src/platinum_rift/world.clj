@@ -17,117 +17,81 @@
 (def num-nodes 154)
 
 (declare reset-world)
+(def max-res 200)
+(def max-inc 6)
+
+
 
 (defn blank-world
   "Returns a zone map representing the whole world."
   []
-  (swap! next-zone-id #(if false % (num 1001)))
-  (swap! world #(when %
-                  {:id 1000
-                   :sub-zones [(blank-NoA)]
-                   :priority 0
-                   :last-eval 0
-                   :value 0
-                   :total-liberties 0
-                   :owner 0
-                   :open-liberties 0})))
+  (loop [node-id 0
+         acc []]
+    (if (< node-id num-nodes)
+      (recur (inc node-id)
+             (conj acc (new-node node-id))) ;;add another node
+      acc)
 
-(defn blank-NoA
-  []
-  {:id (new-zone-id)
-   :sub-zones [(new-zone [0 1 2 3])
-                (new-zone [7 13 19 14 20])
-                (new-zone [4 8 9 15])
-                (new-zone [5 10 6 11 12])
-                (new-zone [16 22 17 23])
-                (new-zone [29 38 21 28])
-                (new-zone [27 37 43])
-                (new-zone [46 47 48 49])
-                ];;todo#{ (set of zone-ids)}
-   :priority 0;;(int to indicate how important this territory is to the strategy gets re-evaluated from time to time)
-   :last-eval -1;;(turn priority was last set)
-   :value 0;;(accumulated total of platinum bars in all sub-zones)
-   :total-liberties 0;;(total number of adjacent zones)
-   :open-liberties 0;;(number of adjacent zones that aren't controlled by you)
-   :owner 0
+    )
+  ;; (swap! next-zone-id #(if false % (num 1001)))
+  ;; (swap! world #(when %
+  ;;                 {:id 1000
+  ;;                  :sub-zones [(blank-NoA)]
+  ;;                  :priority 0
+  ;;                  :last-eval 0
+  ;;                  :value 0
+  ;;                  :total-liberties 0
+  ;;                  :owner 0
+  ;;                  :open-liberties 0}))
+  )
+
+(defn add-income
+  "Takes in the world (a vector of maps, one for each node)."
+  [world]
+  (loop [res-remain max-res
+         next-node (rand-int num-nodes)
+         acc world]
+    (println "Resources remaining: " res-remain)
+    (println "Next-node " next-node)
+    (if (= 0 res-remain)
+      acc;;return the updated world
+      (if (>= (:income (world next-node)) max-inc)
+        (recur res-remain (rand-int num-nodes) acc)
+        (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))
+        ))))
+
+
+
+(defn new-node
+  "Returns a new node"
+  [node-id]
+  {
+   :id node-id
+   :source-value 0;;reset at beginning of every turn
+   :scalar-value 0;;recalculated from nearby source values every turn
+   :owner 0 ;;id of player controlling this
+   :open-liberties 0;;number of touching nodes owners by non-neutral enemy player
+   :total-liberties 0 ;;number of bordering nodes, never reset
+   :income 0
    })
 
-;; (defn get-shortest-path-graph
-;;   "Returns vector of nodes for shortest path between 1 and 2"
-;;   [graph p1 p2]
-;;   (first (filter #(= (last %) p2 ) )))
 
 
-(defn blank-SoA
-  [])
-
-(defn blank-Ant
-  [])
-
-(defn blank-Afr
-  [])
-
-(defn blank-Asi
-  [])
-
-(defn blank-Eur
-  [])
-
-(defn blank-Aus
-  [])
-
-(defn blank-Jap
-  [])
-
-(defn blank-NA
-  [])
-
-(defn blank-NA
-  [])
 
 
-(defn new-zone [ids]
-  (if (not (instance? Long ids))
-    {:id (new-zone-id)
-     :sub-zones (map new-zone ids)
-     :priority 0
-     :last-eval 0
-     :value 0
-     :income (rand-int 6)
-     :total-liberties 0
-     :owner 0
-     :open-liberties 0}
 
-    {:id ids
-     :sub-zones nil
-     :priority 0
-     :last-eval 0
-     :value 0
-     :income (rand-int 6)
-     :total-liberties 0
-     :owner 0
-     :open-liberties 0}))
 
-(defn new-zone-id
-  []
-  (swap! next-zone-id #(inc %)))
 
-(defn new-player
-  [id]
-  {:player id
-   :platinum starting-plat
-   :pods 0
-   :income 0
-   :territories 0})
 
-(defn setup-players
-  ""
-  [num]
-  (swap! p1 #(when % (new-player :p1)))
-  (swap! p2 #(when % (new-player :p2)))
-  (when (> num 2)
-    (swap! p3 #(when % (new-player :p3)))
-    (swap! p4 #(when % (new-player :p4)))))
+
+;; (defn setup-players
+;;   ""
+;;   [num]
+;;   (swap! p1 #(when % (new-player :p1)))
+;;   (swap! p2 #(when % (new-player :p2)))
+;;   (when (> num 2)
+;;     (swap! p3 #(when % (new-player :p3)))
+;;     (swap! p4 #(when % (new-player :p4)))))
 
 
 

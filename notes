@@ -285,6 +285,18 @@ vector field -- use equation to model how a fields scalar value affects priority
 :income
 :territories
 :liberties
+:resources
+}
+
+;;world
+{
+:id zone-id 0-154
+:source-value ;;reset at beginning of every turn
+:scalar-value ;;recalculated from nearby source values every turn
+:owner ;;id of player controlling this
+:open-liberties ;;number of touching nodes owners by non-neutral enemy player
+:total-liberties ;;number of bordering nodes, never reset
+:income ;;plat income of node each turn, never reset
 }
 
 
@@ -293,7 +305,7 @@ vector field -- use equation to model how a fields scalar value affects priority
 gradient descent
 error-calc for gradient descent
 importance of individual advisors as a function of time
-
+player evaluation
 
 
 
