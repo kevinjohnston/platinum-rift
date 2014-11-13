@@ -6,14 +6,14 @@
 
 (defprotocol advisor
   "Protocol for evaluating board."
-  (name [adv] "Name of advisor")
+  (title [adv] "Name of advisor")
   (evaluate [adv node] "Returns source value for the node")
   (influence [adv] [adv adjust] "Returns advisors influence, possibly adjusting that level")
   )
 
 (deftype banker []
   advisor
-  (name [adv] "Banker")
+  (title [adv] "Banker")
   (evaluate [adv node] (- (:income node)))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))

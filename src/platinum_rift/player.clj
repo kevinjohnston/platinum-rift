@@ -46,7 +46,7 @@
   "Quantifies players position."
   [p1 turn]
   ;;todo make this useful
-  (+ (:platinum p1) (:pods p1) (:income p1) (- (:liberties p1))  (:territories p1)))
+  (+ (:platinum p1) (count (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
 
 (defn new-player
   "Creates and returns a new player."
