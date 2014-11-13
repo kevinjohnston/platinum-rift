@@ -57,3 +57,12 @@
               ]
           (recur (assoc-in acc [next-node :scalar-value] scalar-val) ;;return world with scalar-value added in
                  (inc next-node)))))))
+
+(defn point-mod
+  "TODO Returns how the world would appear if x pods were added to location. x can be negative."
+  [x node world]
+  )
+
+(defn move-mod
+  "TODO Returns how the would would appear if x pods were moved from p1 to p2."
+  [x p1 p2 world])

@@ -15,7 +15,32 @@
 (def max-res 200)
 (def max-inc 6)
 
+(declare edge-vector)
+(declare get-shortest-path)
+(declare find-short-paths)
+(declare nearby-nodes)
 
+(defn setup-graph-world []
+  (swap! graph-world #(when % (graph/make-graph #{} {})))
+  (swap! graph-world #(when %
+                        (loop [graph (reduce graph/add-nodes (graph/make-graph #{} {}) (range num-nodes)) ;;add all nodes
+                               edges edge-vector]
+                          (if (empty? edges)
+                            graph
+                            (recur (graph/add-edge graph (first (first edges)) (second (first edges))) ;;add all links
+                                   (next edges)))))))
+
+(defn new-node
+  "Returns a new node"
+  [node-id]
+  {
+   :id node-id
+   :source-value 0 ;;reset at beginning of every turn
+   :scalar-value 0 ;;recalculated from nearby source values every turn
+   :owner 0 ;;id of player controlling this
+   :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
+   :total-liberties 0 ;;number of bordering nodes, never reset
+   :income 0})
 
 (defn blank-world
   "Returns a zone map representing the whole world."
@@ -41,17 +66,7 @@
 
 
 
-(defn new-node
-  "Returns a new node"
-  [node-id]
-  {
-   :id node-id
-   :source-value 0 ;;reset at beginning of every turn
-   :scalar-value 0 ;;recalculated from nearby source values every turn
-   :owner 0 ;;id of player controlling this
-   :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
-   :total-liberties 0 ;;number of bordering nodes, never reset
-   :income 0})
+
 
 
 
@@ -81,7 +96,8 @@
   (setup-graph-world)
   ;;find all shortest paths
   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-  (setup-players 2))
+;;  (setup-players 2)
+  )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -179,15 +195,7 @@
     (Math/abs (- yD yS)))
    2))
 
-(defn setup-graph-world []
-  (swap! graph-world #(when % (graph/make-graph #{} {})))
-  (swap! graph-world #(when %
-                        (loop [graph (reduce graph/add-nodes (graph/make-graph #{} {}) (range num-nodes)) ;;add all nodes
-                               edges edge-vector]
-                          (if (empty? edges)
-                            graph
-                            (recur (graph/add-edge graph (first (first edges)) (second (first edges))) ;;add all links
-                                   (next edges)))))))
+
 
 
 
@@ -320,46 +328,46 @@
 
 
 
-(def q (make-graph #{1 2 3 4} {}))
-(def q2 (add-edge (add-edge q 3 1) 1 4))
-(def q3 (add-edges q [[1 2] [1 3] [3 4]]))
-(def q4 (add-edges (add-nodes q3 5 6) [[4 5] [1 5] [4 6]]))
-(def q5 (add-edges (make-graph #{1 2 3 4 5 6})
-                   [[1 2] [2 3] [3 4] [4 5] [5 6] [6 1]]))
-(def q6 (reduce #(add-node %1 %2) (make-graph) (range 1000)))
-(def q7 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
-                q6
-                (take 10000 (repeatedly #(vector (rand-int 1000)
-                                                 (rand-int 1000))))))
-(neighbors q7 1)
-(take-while (complement #{2}) (breadth-first-traversal q7 1))
-(def q8 (reduce #(add-node %1 (str "node" %2)) (make-graph) (range 1000)))
-(def q9 (reduce (fn [g [n1 n2]] (add-edge g
-                                         (str "node" n1)
-                                         (str "node" n2)))
-                q8
-                (take 10000 (repeatedly #(vector (rand-int 1000)
-                                                 (rand-int 1000))))))
-(def q10 (add-edges (make-graph (set (range 1 10)))
-                    [[1 2] [1 3] [3 4] [4 5] [2 6] [7 8] [8 9] [7 9]]))
-(map clojure.pprint/pprint
-     (map #(vector %
-                   (graph-distance-matrix %))
-          (connected-components q10)))
-(defn neighborfn [g]
-  (fn [n] (neighbors g n)))
-(def q11 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
-                 (reduce #(add-node %1 %2) (make-graph) (range 50))
-                 (take 100 (repeatedly #(vector (rand-int 50)
-                                                (rand-int 50))))))
-;;; this breaks connected components!!! puts a nil in node-set. should not do that...
-(def q12 (add-edges (make-graph (set (range 1 3)))
-                    [[1 1] [1 2] ]))
-(def q13 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
-                 (reduce #(add-node %1 %2) (make-graph) (range 50))
-                 (take 60 (repeatedly #(vector (rand-int 50)
-                                               (rand-int 50))))))
-(connected-components q12)
-(partition-graph q12 1)
+;; (def q (make-graph #{1 2 3 4} {}))
+;; (def q2 (add-edge (add-edge q 3 1) 1 4))
+;; (def q3 (add-edges q [[1 2] [1 3] [3 4]]))
+;; (def q4 (add-edges (add-nodes q3 5 6) [[4 5] [1 5] [4 6]]))
+;; (def q5 (add-edges (make-graph #{1 2 3 4 5 6})
+;;                    [[1 2] [2 3] [3 4] [4 5] [5 6] [6 1]]))
+;; (def q6 (reduce #(add-node %1 %2) (make-graph) (range 1000)))
+;; (def q7 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
+;;                 q6
+;;                 (take 10000 (repeatedly #(vector (rand-int 1000)
+;;                                                  (rand-int 1000))))))
+;; (neighbors q7 1)
+;; (take-while (complement #{2}) (breadth-first-traversal q7 1))
+;; (def q8 (reduce #(add-node %1 (str "node" %2)) (make-graph) (range 1000)))
+;; (def q9 (reduce (fn [g [n1 n2]] (add-edge g
+;;                                          (str "node" n1)
+;;                                          (str "node" n2)))
+;;                 q8
+;;                 (take 10000 (repeatedly #(vector (rand-int 1000)
+;;                                                  (rand-int 1000))))))
+;; (def q10 (add-edges (make-graph (set (range 1 10)))
+;;                     [[1 2] [1 3] [3 4] [4 5] [2 6] [7 8] [8 9] [7 9]]))
+;; (map clojure.pprint/pprint
+;;      (map #(vector %
+;;                    (graph-distance-matrix %))
+;;           (connected-components q10)))
+;; (defn neighborfn [g]
+;;   (fn [n] (neighbors g n)))
+;; (def q11 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
+;;                  (reduce #(add-node %1 %2) (make-graph) (range 50))
+;;                  (take 100 (repeatedly #(vector (rand-int 50)
+;;                                                 (rand-int 50))))))
+;; ;;; this breaks connected components!!! puts a nil in node-set. should not do that...
+;; (def q12 (add-edges (make-graph (set (range 1 3)))
+;;                     [[1 1] [1 2] ]))
+;; (def q13 (reduce (fn [g [n1 n2]] (add-edge g n1 n2))
+;;                  (reduce #(add-node %1 %2) (make-graph) (range 50))
+;;                  (take 60 (repeatedly #(vector (rand-int 50)
+;;                                                (rand-int 50))))))
+;; (connected-components q12)
+;; (partition-graph q12 1)
 
-(breadth-first-traversal-with-path q12 1)
+;; (breadth-first-traversal-with-path q12 1)

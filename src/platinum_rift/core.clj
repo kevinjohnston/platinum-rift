@@ -6,6 +6,7 @@
   (:gen-class))
 
 (def debug true)
+(declare create-players)
 
 (defn -main
   "I don't do a whole lot ... yet."
