@@ -241,13 +241,23 @@ what is optimal
 (evalutate-game-state-better-worse-and-adjust-advisor-influence)
 
 
-;;;;today
-working heat map of world
-$able to assign a value to each node via an advisor ;;create a priority-source field
-$able to adjust a node and nearby nodes based on some function ;;create a scalar field
-$able to make a point source and scalar adjustment (w/o side effects) to a map for quick comparison
-$have data structue to hold scalar values, vector values
+;;;;TODO
+create method to evaluate board and return seq of moves
+create method to evaluate board and return seq of placements
+create method for adusting advisor influence
+create method to fit a curve from data points
+create additional advisors
+create constants for advisor initial influence (?and how much to adjust influence?)
+fill out skeleton of main method
+fill out edge vector
 
+
+;;;;DONE
+#working heat map of world
+#able to assign a value to each node via an advisor ;;create a priority-source field
+#able to adjust a node and nearby nodes based on some function ;;create a scalar field
+#able to make a point source and scalar adjustment (w/o side effects) to a map for quick comparison
+#create method to accurately distribute income to map nodes
 
 how to use advisor influence (weights source adjustment at node)
 how to adjust advisor influence

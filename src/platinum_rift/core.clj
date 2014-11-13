@@ -15,6 +15,9 @@
   (world/reset-world)
   (let [players (create-players 2)]
     (loop [turn 1]
+      (when debug
+        (println "Player1 eval: " (player/evaluate (first players) turn) " turn: " turn)
+        (println "Player2 eval: " (player/evaluate (second players) turn) " turn: " turn))
       (if (<= turn 200)
         true
         (recur (inc turn))))

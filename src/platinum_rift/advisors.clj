@@ -14,7 +14,7 @@
 (deftype banker []
   advisor
   (name [adv] "Banker")
-  (evaluate [adv node] (:income node))
+  (evaluate [adv node] (- (:income node)))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
 
@@ -26,7 +26,7 @@
 
 (defn advise
   "Returns the world with source and scalar values modified by advisors."
-  [world p1 & advisors]
+  [world p1 advisors]
   (let [source-world
         ;;modify all source values
         (loop [wor world
@@ -58,6 +58,11 @@
           (recur (assoc-in acc [next-node :scalar-value] scalar-val) ;;return world with scalar-value added in
                  (inc next-node)))))))
 
+(defn get-advisors
+  "Returns a list of all advisors"
+  []
+  (list (banker.)))
+
 (defn point-mod
   "TODO Returns how the world would appear if x pods were added to location. x can be negative."
   [x node world]
@@ -66,3 +71,8 @@
 (defn move-mod
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."
   [x p1 p2 world])
+
+
+
+;;how to predict opponents next move
+;;how to determine confidence of being able to predict opponents next move
