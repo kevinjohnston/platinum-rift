@@ -9,6 +9,10 @@
 
 (declare create-players)
 (def official-world (world/reset-world))
+(def official-player1 (atom (player/new-player)))
+(def official-player2 (atom (player/new-player)))
+(def official-player3 (atom (player/new-player)))
+(def official-player4 (atom (player/new-player)))
 ;;our understanding of the world, for tactical purposes
 (def s-world (agent []))
 ;;our understanding of the world, for movement purposes
@@ -138,15 +142,23 @@
 
 ;;;;;;;;;;;;;;;;;;;;MOVEMENT
           ;;TODO process movement from AIs
+          (run-commands :movement)
 ;;;;;;;;;;;;;;;;;;;;BUYING
           ;;TODO process placement from AIs
+          (run-commands :placement)
 ;;;;;;;;;;;;;;;;;;;;FIGHTING
           ;;TODO follow fight logic
+          (battle official-world)
 ;;;;;;;;;;;;;;;;;;;;OWNING
           ;;TODO update ownership in world
+          (own official-world)
 ;;;;;;;;;;;;;;;;;;;;DISTRIBUTING INCOME
           ;;TODO adjust player income
-
+          (distrib [official-player1
+                    official-player2
+                    official-player3
+                    official-player4]
+                   @official-world)
 
 
 
