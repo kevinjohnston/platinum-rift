@@ -4,25 +4,38 @@
 (def banker-inf (atom 1))
 (def unit-inf (atom 1))
 (def scalar-constant 1)
+(def friendly-constant (atom 1))
+(def enemy-constant (atom 1))
 
 (defprotocol advisor
   "Protocol for evaluating board."
   (title [adv] "Name of advisor")
-  (evaluate [adv node] "Returns source value for the node")
+  (evaluate [adv node p1] "Returns source value for the node")
   (influence [adv] [adv adjust] "Returns advisors influence, possibly adjusting that level")
   )
 
 (deftype banker []
   advisor
   (title [adv] "Banker")
-  (evaluate [adv node] (- (:income node)))
+  (evaluate [adv node p1] (- (:income node)))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
 
 (deftype unit []
   advisor
   (title [adv] "Unit")
-  (evaluate [adv node] (+ (* (:pods node) 5)))
+  (evaluate [adv node p1]
+    (loop [player-pods (:pods node)
+           p-id 0
+           acc 0]
+      (if (< p-id (count (:pods node))) ;;ensure we don't process players not in the game
+        (recur
+         (next player-pods)
+         (inc p-id)
+         (if (= p-id (:id p1)) ;;process friendly pods different than enemy pods
+           (+ acc (* ((:pods node) p-id) @friendly-constant))
+           (+ acc (* ((:pods node) p-id) @enemy-constant))))
+        acc)))
   (influence [adv] @unit-inf)
   (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
 
@@ -48,7 +61,7 @@
                                (if (= nil adv)
                                  acc ;;gathered adjustment for each advisor return total
                                  ;;get more advice for node
-                                 (recur (next advisors) (+ acc (evaluate (first adv) (wor next-node)))))))
+                                 (recur (next adv) (+ acc (evaluate (first adv) (wor next-node) p1))))))
                    (inc next-node))))]
     ;;modify all scalar values
     (loop [acc source-world
@@ -75,11 +88,12 @@
             acc ;;gathered adjustment for each advisor return total
             ;;get more advice for node
             (recur
-             (next advisors)
+             (next adv)
              (+ acc
                 (evaluate
                  (first adv)
-                 (world (:id node)))))))
+                 (world (:id node))
+                 p1)))))
         ;;modify the source value for the node
         source-world (assoc-in world
                                [(:id node) :source-value]
@@ -100,7 +114,9 @@
 (defn get-advisors
   "Returns a list of all advisors"
   []
-  (list (banker.)))
+  ;;(list (banker.) )
+  (list (banker.) (unit.))
+  )
 
 (defn move-mod
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."

@@ -21,7 +21,9 @@
 (declare find-short-paths)
 (declare nearby-nodes)
 
-(defn setup-graph-world []
+(defn setup-graph-world
+  "Creates the defacto graph world, hopefully this is identical to the true game world (though logic shouldn't depend on it)."
+  []
   (swap! graph-world #(when % (graph/make-graph #{} {})))
   (swap! graph-world #(when %
                         (loop [graph (reduce graph/add-nodes (graph/make-graph #{} {}) (range num-nodes)) ;;add all nodes
@@ -31,18 +33,19 @@
                             (recur (graph/add-edge graph (first (first edges)) (second (first edges))) ;;add all links
                                    (next edges)))))))
 
+
 (defn new-node
   "Returns a new node"
-  [node-id]
-  {
-   :id node-id
-   :source-value 0 ;;reset at beginning of every turn
-   :scalar-value 0 ;;recalculated from nearby source values every turn
-   :owner 0 ;;id of player controlling this
-   :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
-   :total-liberties 0 ;;number of bordering nodes, never reset
-   :income 0
-   :pods 0})
+  ([node-id] (new-node node-id 0))
+  ([node-id income]
+     {:id node-id
+      :source-value 0 ;;reset at beginning of every turn
+      :scalar-value 0 ;;recalculated from nearby source values every turn
+      :owner 1000 ;;id of player controlling this, neutral '1000' by default
+      :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
+      :total-liberties 0 ;;number of bordering nodes, never reset
+      :income 0
+      :pods [0 0 0 0]}))
 
 (defn blank-world
   "Returns a zone map representing the whole world."
@@ -78,27 +81,6 @@
                   ;;get all bordering node ids
                   (map last (next (nearby-nodes 2 0))))))))
 
-
-
-
-
-
-
-
-
-
-;; (defn setup-players
-;;   ""
-;;   [num]
-;;   (swap! p1 #(when % (new-player :p1)))
-;;   (swap! p2 #(when % (new-player :p2)))
-;;   (when (> num 2)
-;;     (swap! p3 #(when % (new-player :p3)))
-;;     (swap! p4 #(when % (new-player :p4)))))
-
-
-
-
 (defn reset-world
   ""
   []
@@ -106,8 +88,7 @@
   (setup-graph-world)
   ;;find all shortest paths
   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-;;  (setup-players 2)
-  )
+  world)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -145,83 +126,6 @@
                   (map #(nth world %)
                        ;;get node ids of nearby nodes
                        (map last (nearby-nodes radius node-id))))))
-
-
-;; {:id 1002,
-;;  :sub-zones #{
-
-;;               {:id 1010,
-;;                :sub-zones (
-;;                            {:id 0, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 1, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 2, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 3, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1007,
-;;                :sub-zones (
-;;                            {:id 29, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 38, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 21, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 28, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties
-;;                0}
-;;               {:id 1004,
-;;                :sub-zones (
-;;                            {:id 16, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 22, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 17, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 23, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1009,
-;;                :sub-zones (
-;;                            {:id 4, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 8, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 9, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 15, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1006,
-;;                :sub-zones (
-;;                            {:id 46, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 47, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 48, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 49, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1003,
-;;                :sub-zones (
-;;                            {:id 5, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 10, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 6, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 11, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 12, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0,
-;;                :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1008,
-;;                :sub-zones (
-;;                            {:id 7, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 13, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 19, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 14, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 20, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;               {:id 1005,
-;;                :sub-zones (
-;;                            {:id 27, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 37, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}
-;;                            {:id 43, :sub-zones nil, :priority 0, :last-eval 0, :value 0, :total-liberties 0, :open-liberties 0}),
-;;                :priority 0, :last-eval 0, :value
-;;                0, :total-liberties 0, :open-liberties 0}}, :priority 0, :last-eval -1, :value 0, :total-liberties 0, :open-liberties 0}
-
-(defn s-dist
-  "Given a vector of starting x, y coordinates and a vector of destination coordinates returns the shortest number of moves to traverse."
-  [[xS yS] [xD yD]]
-  (/
-   (+
-    (Math/abs (- xD xS))
-    (Math/abs (- yD yS)))
-   2))
-
-
-
 
 
 (def edge-vector

@@ -1,11 +1,12 @@
 (ns platinum-rift.player
   (:require [platinum-rift.world :as world]
+            [platinum-rift.constants :refer :all]
+            [platinum-rift.mimic :refer :all] ;;refer to won't need to specify namespace just like in the real game
             [platinum-rift.advisors :as advisors]))
 
 
-(def starting-plat 200)
-(def next-id (atom 0))
-(def pod-cost 20)
+(def next-id (atom -1))
+
 
 
 ;; With each game round, the following actions are executed sequentially :
@@ -36,7 +37,7 @@
            ))))
     (calc world)
     (await ag-inc ag-terr ag-lib)
-    {:player p1
+    {:id p1
      :income @ag-inc
      :territories @ag-terr
      :liberties @ag-lib}))
@@ -50,7 +51,7 @@
 (defn new-player
   "Creates and returns a new player."
   []
-  {:player (swap! next-id #(inc %))
+  {:id (swap! next-id #(inc %))
    :platinum starting-plat
    :income 0
    :territories 0 ;;determined every round
@@ -62,7 +63,7 @@
 (defn reset
   ""
   []
-  (swap! next-id #(when % 0)))
+  (swap! next-id #(when % -1)))
 
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
@@ -93,6 +94,7 @@
 (defn det-place
   "Determines where to place units. Does not combine information"
   [p1 world]
+    (println "pods: " (int (/ (:platinum p1) pod-cost)))
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
          acc []]
@@ -100,10 +102,10 @@
       acc
       ;;recur with point modified map and one less pod
       (let [global-min (world/get-global-min wor)]
-      (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) world/standard-radius)
-             (dec pods) ;;decrease pods available by 1
-             ;;place a pod at global minima
-             (conj acc [global-min 1]))))))
+        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) world/standard-radius)
+               (dec pods) ;;decrease pods available by 1
+               ;;place a pod at global minima
+               (conj acc [1 (:id global-min)]))))))
 
 (defn comp-move
   "Compares if two move vectors can be combined, returns the combination if so."
@@ -125,7 +127,7 @@
   [vectors]
   (loop [acc [(first (sort-by second vectors))]
          v (next (sort-by second vectors))]
-    (println acc)
+    ;; (println acc)
     (if (empty? v)
       acc
       (recur (reduce conj (reduce conj [] (butlast acc)) ((if (= 3 (count (first vectors))) comp-move comp-place ) (last acc) (first v)) )
@@ -138,7 +140,7 @@
          v vector]
     (if (empty? v)
       acc
-      (recur (str acc (apply str " " (interpose " " [1 2 3]) ))
+      (recur (str acc (apply str " " (interpose " " (first v)) ))
              (next v)))))
 
 (defn gen-move-message
@@ -146,11 +148,11 @@
   [unit-move-vector]
   (if (or (empty? unit-move-vector) (= nil (first unit-move-vector)))
     "WAIT"
-    (v-to-msg unit-move-vector)))
+    (v-to-msg (combine-vectors unit-move-vector))))
 
 (defn gen-place-message
   "Returns a string to place new units."
   [unit-place-vector]
   (if (or (empty? unit-place-vector) (= nil (first unit-place-vector)))
     "WAIT"
-    (v-to-msg unit-place-vector)))
+    (v-to-msg (combine-vectors unit-place-vector))))

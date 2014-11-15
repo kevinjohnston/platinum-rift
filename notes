@@ -241,18 +241,30 @@ what is optimal
 (evalutate-game-state-better-worse-and-adjust-advisor-influence)
 
 
+;;;;;;;;;;;;;;;;;;;; FILES ;;;;;;;;;;;;;;;;;;;;
+;;;;;clojure files
+world.clj -- encapsulates the game world, provides some functions to evaluate it
+advisors.clj -- encapulates tactical board evaluation
+player.clj -- used to represent a player within the game handles much of the higher level decision logic and how to turn that into outpu
+core.clj -- used to test the application and mimic the game world
+graph.clj -- contains the graph implementation used by player,advisors to find shortest paths and evaluate the game board
+
+
+
+
 ;;;;TODO
-create method to evaluate board and return seq of moves
-create method to evaluate board and return seq of placements
+
 create method for adusting advisor influence
-create method to fit a curve from data points
 create additional advisors
 create constants for advisor initial influence (?and how much to adjust influence?)
-fill out skeleton of main method
-fill out edge vector
 
 
 ;;;;DONE
+#remove all direct references to mutable world from other files (except core.clj)
+#fill out skeleton of main method
+#fill out edge vector
+#create method to evaluate board and return seq of moves
+#create method to evaluate board and return seq of placements
 #working heat map of world
 #able to assign a value to each node via an advisor ;;create a priority-source field
 #able to adjust a node and nearby nodes based on some function ;;create a scalar field
