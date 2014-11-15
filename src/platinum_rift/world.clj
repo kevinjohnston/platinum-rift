@@ -10,6 +10,7 @@
 (def graph-world (atom (graph/make-graph #{} {})))
 (def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
 (def num-nodes 154)
+(def standard-radius 3)
 
 (declare reset-world)
 (def max-res 200)

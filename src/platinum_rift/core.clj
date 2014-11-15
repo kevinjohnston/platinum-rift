@@ -15,13 +15,18 @@
   (world/reset-world)
   (let [players (create-players 2)]
     (loop [turn 1]
+      ;;basic turn structure
+      ;;determine where to move units
+      ;;determine where to place units
+      ;;send commands
+
       (when debug
         (println "TURN: " turn)
         (println "Player1 eval: " (player/evaluate (first players) turn))
         (println "Player2 eval: " (player/evaluate (second players) turn)))
-      (if (>= turn 200)
-        true
-        (recur (inc turn))))))
+      (if (< turn 200)
+        (recur (inc turn))
+        ))))
 
 
 (defn create-players
@@ -34,5 +39,3 @@
       acc
       (recur (dec more)
              (conj acc (player/new-player))))))
-
-(create-players 2)

@@ -22,8 +22,7 @@
 (defn player-stats [p1 world]
   (let [ag-inc (agent 0) ;;totals income for player
         ag-terr (agent 0) ;;totals territory controlled by the player
-        ag-lib (agent 0) ;;totals liberties of player
-        ]
+        ag-lib (agent 0)] ;;totals liberties of player
     (defn calc [zone] ;;function to send messages to agents
       "calculates player stats for the zone"
       (doall
@@ -66,52 +65,92 @@
   (swap! next-id #(when % 0)))
 
 (defn det-move
-  "TODO Determine where to move units"
+  "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
   [sight p1 world]
   ;;create a scalar map of the world and move each unit towards its local minimum
   (let [scalar-world (advisors/advise world p1 (advisors/get-advisors))]
     (loop [pods (:pods p1)
            acc []]
-
       (if (empty? pods)
         acc ;;return moves
         (recur (next pods)
                ;;conj onto accumulator a movement of one pod along its path to its local min
                (conj acc
-                     [;;or first tries to find the next node along the shortest path to the pods local minima
-                      (or (second
-                           ;;get shortest path
-                           (world/get-shortest-path (first (first pods)) ;;pods current position
-                                                    ;;get node id of local minima
-                                                    (:id (world/get-local-min sight
+                    ;;or first tries to find the next node along the shortest path to the pods local minima
+                     [(or (second
+                          ;;get shortest path
+                          (world/get-shortest-path (first (first pods)) ;;pods current position
+                                                   ;;get node id of local minima
+                                                   (:id (world/get-local-min sight
                                                                               (first (first pods))
                                                                               scalar-world))))
                           ;;this second clause of the or will return the pods current node
                           (first (first pods)))
                       ;;move only one pod
-                      1]))))))
+                      ]))))))
 
 
 (defn det-place
-  "TODO Determine where to place units"
-  [p1]
-  (loop [world @world/world
+  "Determines where to place units. Does not combine information"
+  [p1 world]
+  (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
          acc []]
-    ;;find global minima
-    ;;place a pod
     (if (= 0 pods)
       acc
       ;;recur with point modified map and one less pod
-      (recur world (dec pods) acc))
-    ))
+      (let [global-min (world/get-global-min wor)]
+      (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) world/standard-radius)
+             (dec pods) ;;decrease pods available by 1
+             ;;place a pod at global minima
+             (conj acc [global-min 1]))))))
+
+(defn comp-move
+  "Compares if two move vectors can be combined, returns the combination if so."
+  [a b]
+  (if (and (= (second a) (second b))
+           (= (second (next a)) (second (next b))))
+    [[(+ (first a) (first b)) (second a) (second (next a))]]
+    [a b]))
+
+(defn comp-place
+  "Compares if two placement vectors can be combined, returns the combination if so."
+  [a b]
+  (if (= (second a) (second b))
+    [[(+ (first a) (first b)) (second a)]]
+    [a b]))
+
+(defn combine-vectors
+  "Combines movement and placement vectors if possible."
+  [vectors]
+  (loop [acc [(first (sort-by second vectors))]
+         v (next (sort-by second vectors))]
+    (println acc)
+    (if (empty? v)
+      acc
+      (recur (reduce conj (reduce conj [] (butlast acc)) ((if (= 3 (count (first vectors))) comp-move comp-place ) (last acc) (first v)) )
+             (next v)))))
+
+(defn v-to-msg
+  "Converts a vector into a string message."
+  [vector]
+  (loop [acc ""
+         v vector]
+    (if (empty? v)
+      acc
+      (recur (str acc (apply str " " (interpose " " [1 2 3]) ))
+             (next v)))))
 
 (defn gen-move-message
   "Returns a string to move units."
   [unit-move-vector]
-  "WAIT")
+  (if (or (empty? unit-move-vector) (= nil (first unit-move-vector)))
+    "WAIT"
+    (v-to-msg unit-move-vector)))
 
 (defn gen-place-message
   "Returns a string to place new units."
   [unit-place-vector]
-  "WAIT")
+  (if (or (empty? unit-place-vector) (= nil (first unit-place-vector)))
+    "WAIT"
+    (v-to-msg unit-place-vector)))
