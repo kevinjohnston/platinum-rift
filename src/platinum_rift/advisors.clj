@@ -68,23 +68,27 @@
 (defn point-mod
   "Modifies a specific node and nearby nodes in a given radius"
   [world p1 node advisors near-radius]
-
   (let [source-mod
         (loop [adv advisors
-                         acc 0]
-                    (if (= nil adv)
-                      acc ;;gathered adjustment for each advisor return total
-                      ;;get more advice for node
-                      (recur (next advisors) (+ acc (evaluate (first adv) (world node))))))
+               acc 0]
+          (if (= nil adv)
+            acc ;;gathered adjustment for each advisor return total
+            ;;get more advice for node
+            (recur
+             (next advisors)
+             (+ acc
+                (evaluate
+                 (first adv)
+                 (world (:id node)))))))
         ;;modify the source value for the node
         source-world (assoc-in world
-                               [node :source-value]
+                               [(:id node) :source-value]
                                source-mod)
         ]
     ;;modify the scalar value for all near nodes
     (loop [world source-world
-           nodes (map last (world/nearby-nodes near-radius node)) ;;list of surrounding node ids
-           distances (map count (world/nearby-nodes near-radius node))] ;;list of distances to surrounding nodes
+           nodes (map last (world/nearby-nodes near-radius (:id node))) ;;list of surrounding node ids
+           distances (map count (world/nearby-nodes near-radius (:id node)))] ;;list of distances to surrounding nodes
       (if (empty? nodes)
         world
         (recur (assoc-in world

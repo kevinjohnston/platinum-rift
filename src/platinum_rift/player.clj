@@ -68,7 +68,7 @@
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
   [sight p1 world]
   ;;create a scalar map of the world and move each unit towards its local minimum
-  (let [scalar-world (advisors/advise world p1 (advisors/get-advisors))]
+  (let [scalar-world (advisors/advise world p1 (advisors/get-advisors) sight)]
     (loop [pods (:pods p1)
            acc []]
       (if (empty? pods)

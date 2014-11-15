@@ -14,19 +14,24 @@
   ;;create a world
   (world/reset-world)
   (let [players (create-players 2)]
-    (loop [turn 1]
+    (loop [turn 1
+           world @world/world]
       ;;basic turn structure
+
       ;;determine where to move units
+      (let [movement (player/det-move 3 (first players) world)
+            placement (player/det-place (first players) world)]
       ;;determine where to place units
       ;;send commands
-
       (when debug
         (println "TURN: " turn)
+        (println "Movement: " movement)
+        (println "Placement: " placement)
         (println "Player1 eval: " (player/evaluate (first players) turn))
-        (println "Player2 eval: " (player/evaluate (second players) turn)))
+        (println "Player2 eval: " (player/evaluate (second players) turn))))
       (if (< turn 200)
-        (recur (inc turn))
-        ))))
+        (recur (inc turn)
+               @world/world)))))
 
 
 (defn create-players
