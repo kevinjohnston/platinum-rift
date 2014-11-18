@@ -335,3 +335,84 @@ player evaluation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Monte Carlo approach ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 after first turn of placing pods on ten highest income sites (or some randomly amongst income sites)
 try to play as many games as possible and determine which moves are most likely to result in success, make random moves (possibly weighted towards moving to income squares), model opponent as always moving towards highest empty resource square
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;; Game loop ;;;;;;;;;;;;;;;;;;;;
+;;before
+create official players
+create official world
+
+
+;;;;;ai portion
+;;setup
+create partial functions for run-player function
+enqueue variables for read function
+start player timer
+;;main
+
+
+;;after all ai
+run turn phases
+recur if remaining turns
+
+
+
+
+;;functions
+setup -- handles initial writing to a given read-q
+run-player -- handles running and pausing a player ai
+ai -- a players ai logic
+;;symbols
+
+
+
+
+
+
+
+;;problem
+game expects code to exist in a while true loop
+ai code needs to be started and stopped -- managed externally
+need to be able to start and stop each ai together and only after the queues for the next turn are ready
+need to only enqueue the next turns information after each ai has had time to come up with orders
+
+;;solution -- thread passing
+threads are run and suspended by run-player functions and resulting paused thread is returned
+every turn run-player is passed new thread to resume and pause again
+
+;;problem-b
+the thread managed by run-player needs special first turn setup and additional setup at the beginning of every turn therafter
+
+;;solution -- setup function passing
+make run-player take a setup function that performs the setup process, this will be specially created at beginning of game
+  and remade in recur function for the game loop
+
+
+
+
+
+run-player signature
+(turn-time info-q ai-thread player-id setup) -> (ai-thread)
+
+setup-signature (defined)

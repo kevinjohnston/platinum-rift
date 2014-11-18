@@ -1,20 +1,17 @@
 (ns platinum-rift.world
-  (:require [platinum-rift.graph :as graph]))
+  (:require [platinum-rift.graph :as graph]
+            [platinum-rift.constants :refer :all]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MODEL THE GAME WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def starting-plat 200)
-(def world (atom {}))
+;; (def world (atom {}))
+(def world (atom []))
 (def graph-world (atom (graph/make-graph #{} {})))
 (def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
-(def num-nodes 154)
-(def standard-radius 3)
 
 (declare reset-world)
-(def max-res 200)
-(def max-inc 6)
 
 (declare edge-vector)
 (declare get-shortest-path)
@@ -89,6 +86,15 @@
   ;;find all shortest paths
   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
   world)
+
+(defn new-world
+  ""
+  []
+  (add-income (blank-world))
+  (setup-graph-world)
+  ;;find all shortest paths
+  (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
+  (add-income (blank-world)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

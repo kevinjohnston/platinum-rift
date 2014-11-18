@@ -50,8 +50,8 @@
 
 (defn new-player
   "Creates and returns a new player."
-  []
-  {:id (swap! next-id #(inc %))
+  [id]
+  {:id id
    :platinum starting-plat
    :income 0
    :territories 0 ;;determined every round
@@ -102,7 +102,7 @@
       acc
       ;;recur with point modified map and one less pod
       (let [global-min (world/get-global-min wor)]
-        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) world/standard-radius)
+        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) standard-radius)
                (dec pods) ;;decrease pods available by 1
                ;;place a pod at global minima
                (conj acc [1 (:id global-min)]))))))

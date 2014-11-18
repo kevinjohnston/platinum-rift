@@ -1,5 +1,6 @@
 (ns platinum-rift.advisors
-  (:require [platinum-rift.world :as world]))
+  (:require [platinum-rift.world :as world]
+            [platinum-rift.constants :refer :all]))
 
 (def banker-inf (atom 1))
 (def unit-inf (atom 1))
@@ -52,7 +53,7 @@
         ;;modify all source values
         (loop [wor world
                next-node 0]
-          (if (= next-node world/num-nodes)
+          (if (= next-node num-nodes)
             wor
             (recur (assoc-in wor
                              [next-node :source-value]
@@ -66,7 +67,7 @@
     ;;modify all scalar values
     (loop [acc source-world
            next-node 0]
-      (if (= next-node world/num-nodes)
+      (if (= next-node num-nodes)
         acc
         (let [nearby-nodes-paths (world/nearby-nodes near-radius next-node) ;;only care about nodes within this step distance
               nearby-source-node-ids (map last nearby-nodes-paths) ;;get id's for nearby nodes
