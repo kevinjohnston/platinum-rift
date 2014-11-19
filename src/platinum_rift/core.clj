@@ -256,23 +256,23 @@
 
 (defn distribution-phase
   "Handles updating platinum for the players"
-  [[official-world official-players]])
+  [[official-world official-players]]
+;;loop over each node in the world and update its owners platinum by its income amount
+  (loop [nodes official-world
+         updated-players official-players]
+    (if (empty? nodes)
+      [official-world updated-players]
+      ;;clarify code with let assignment
+      (let [node (first nodes)
+            owning-player (updated-players (:owner node))
+            player-id (:owner node)
+            current-plat (:platinum owning-player)]
+      (recur (next nodes)
+             (if (:owner node) ;;only adjust player income if node is actually owned by someone
+               (assoc-in updated-players [player-id :platinum] (+ current-plat (:income node)))
+               updated-players))))))
 
 
-
-(placement-phase
- [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
-  [{:id 0 :platinum 200} {:id 1 :platinum 200}]])
-(create-players 4 0)
-
-(first (first @move-requests ))
-
-(movement-phase
- [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
-  (create-players 4 0)])
-(:id (first (create-players 4 0) ))
-
-(first (world/new-world))
 ;; ;;;;;;;;;;;;;;;;;;;;MOVEMENT
 ;;       (let [moved-world (run-commands :movement official-world)]
 ;; ;;;;;;;;;;;;;;;;;;;;BUYING
@@ -834,3 +834,30 @@ java.util.concurrent.TimeUnit/SECONDS
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       );;end initial setup
     )
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TESTING
+;; (distribution-phase
+;;  [[{:id 0 :source-value 0 :pods [5 3 0 0] :income 1 :owner 0}  {:id 1 :source-value 0 :pods [5 3 0 0] :income 3 :owner 1} ]
+;;   [{:id 0 :platinum 200} {:id 1 :platinum 200}]])
+
+
+
+;; (placement-phase
+;;  [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
+;;   [{:id 0 :platinum 200} {:id 1 :platinum 200}]])
+;; (create-players 4 0)
+
+;; (first (first @move-requests ))
+
+;; (movement-phase
+;;  [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
+;;   (create-players 4 0)])
+;; (:id (first (create-players 4 0) ))
+
+;; (first (world/new-world))
