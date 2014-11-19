@@ -466,104 +466,10 @@
              (conj acc (player/new-player id))))))
 
 
-
-;; (let [player (player/new-player)
-;;       world-atom (world/reset-world)]
-;;   (platinum-rift.mimic/mprintln player "10 0" @world-atom)
-;;   ;; (platinum-rift.mimic/run-commands :placement world-atom)
-
-;;   (first @world-atom)
-;;   )
-
-
-;; (let [player (player/new-player)
-;;       ;; request "10 0"
-;;       request "WAIT"
-;;       world-agent (world/reset-world)]
-;;   (:id (player/new-player))
-;;   (platinum-rift.mimic/enqueue-command :placement (:id player) (partial place player request))
-;;   (second (first @platinum-rift.mimic/placement-commands))
-;;   (platinum-rift.mimic/run-commands :placement world-agent)
-
-;;   (let [res (first @platinum-rift.mimic/placement-commands)]
-;; (player/reset)
-;;     res)
-;;   )
-
-
-;; @platinum-rift.mimic/placement-commands
-
-
-
-
-;; ;;parts to recording functions
-;; ;;send request to mimic
-
-
-;; ;;create function to be called later
-;; ((first [(partial + 1) (partial + 2)])  2)
-
-;; (def move-commands (atom {0 []
-;;                             1 []
-;;                             2 []
-;;                             3 []}))
-;; (def placement-commands (atom {0 []
-;;                             1 []
-;;                             2 []
-;;                             3 []})) ;;requests made by the players to the game
-
-;; ;;call functions
-;; ;;[(fn [a] (println a))]
-;; (let [player (player/new-player)
-;;       placement-commands (atom {0 [(partial platinum-rift.mimic/place-test player [10 0])]
-;;                             1 []
-;;                             2 []
-;;                             3 []})
-;;       move-commands (atom {0 []
-;;                             1 []
-;;                             2 []
-;;                            3 []})
-;;       world-atom (world/reset-world)]
-
-;;   (platinum-rift.mimic/run-commands-test :placement world-atom placement-commands move-commands)
-;;  (player/reset)
-
-;;   )
-
-
-;; (condp = :things2
-;;     :placement "hi"
-;;     :movement "bye"
-;;     :things "stuff"
-;;      nil
-;;     )
-
-
-
-;; (let [def-fun (fn [& vars] (println vars) (println (reduce + vars)) (reduce + vars))
-;;       function-list [(partial def-fun 1) (partial def-fun 2)]]
-;;   (loop [func function-list]
-;;       ((first func ) 2)
-;;     (if (> (count func) 1)
-
-;;       (recur (next func))
-;;       ((first func) 2)
-;;       )))
-
-
-
-
-
-
-;; ;;some atom
-;; (def test-atom (atom []))
-
-;; ;;function to swap things
-;; (defn i-swap
-;;   [my-atom]
-;;   (swap! my-atom #(conj % 1))
-;;   15)
-
+(defn shutdown
+  "Terminates all periodic tasks."
+  []
+  (swap! pool (fn [p] (when p (.shutdown p)))))
 
 
 (defn setup-first-turn
@@ -592,15 +498,24 @@
         (recur (dec i) (next vec))))
 
     ;;call normal turn setup
-    (setup-normal read-q player-id [world players])
-    ;; ;;add in starting platinum information
-    ;; (mwrite read-q starting-plat)
-    )
+    (setup-normal read-q player-id [world players]))
 
 (defn setup-normal
   "Performs normal setup during game loop."
   [read-q player-id [world players]]
-  )
+  ;;write player platinum information
+  (mwrite read-q (:platinum (players player-id)))
+  ;;write zone information
+  (loop [nodes world]
+    (when (not (empty? nodes))
+      (let [node (first nodes)]
+        (mwrite read-q (:id node))
+        (mwrite read-q (:owner node))
+        (mwrite read-q ((:pods node) 0))
+        (mwrite read-q ((:pods node) 1))
+        (mwrite read-q ((:pods node) 2))
+        (mwrite read-q ((:pods node) 3))
+      (recur (next nodes))))))
 
 (defn run-player
   "Encapsulates a players AI, handles running and pausing the AI.
@@ -611,10 +526,10 @@
 
   (setup read-q) ;;call the partial function setup, with appropriate read-q
 
-      (println "Finished setup")
+  (println "Finished setup")
   ;;start timer
-      (let [ai-thread (Thread. ai)
-            started false]
+  (let [ai-thread (Thread. ai)
+        started false]
     (while (not @game-over)
       (println "Not over yet")
       (if (empty? (filter false? @turn-keeper)) ;;check if all ai's are ready for the next turn
@@ -626,111 +541,23 @@
             ;; (= Thread.State/NEW (.getState ai))
             (.resume ai-thread)
             (.start ai-thread))
-      (println "Started/resumed")
+          (println "Started/resumed")
           ;;wait for turn time
           (Thread/sleep turn-time)
-      (println "Woke up")
+          (println "Woke up")
           ;;pause AI
-      (if (.isAlive ai-thread)
-        (println "alive")
-        (println "dead")
-            )
-      (.suspend ai-thread)
+          (if (.isAlive ai-thread)
+            (println "alive")
+            (println "dead"))
+          (.suspend ai-thread)
           (println "suspended")
-      (if (.isAlive ai-thread)
-        (println "alive")
-        (println "dead")
-            )
-;;wait for the next turn to be ready
-      (Thread/wait)
-          ;; (send turn-keeper #(assoc % player-number true)))
-        )
-        )
-      )
-        (.stop ai-thread)
-        (println "killed")
-
-      )
-java.lang.Thread.State/NEW
-java.util.concurrent.TimeUnit/SECONDS
-(let [things (Thread. ai1)])
-
-(def turn-keeper (agent [true true true true]))
-(send turn-keeper #(assoc % 2 true))
-
-(let [ai test-ai
-      read-q (atom [])
-      turn-time 100
-      turn-keeper (agent [true true true true])
-      player-number 0
-
-      num-players 4
-      game-world (world/new-world)
-      setup (partial setup num-players player-number game-world)]
-(swap! game-over (fn [_] false))
-  (run-player ai read-q turn-time turn-keeper player-number setup)
-
-  ;; (loop [times 5]
-  ;;   (when (> times 0)
-  ;;     (println "sleeping")
-  ;;     (Thread/sleep 1000)
-  ;;     (println "woke up")
-  ;;     (recur (dec times))))
-  )
-
-  ;; [num-players player-id game-world read-q]
-
-
-(defn test-ai
-  []
-    (println "waking up after 10 milliseconds")
-  (while true ;;(> (rand-int 100) 20)
-  (swap! some-atom #(inc %))
-    (Thread/sleep 10)
-    (println "waking up after 10 milliseconds")
-    )
-  )
-(def some-atom (atom 1))
-(.start (Thread. #(test-ai) ))
- @some-atom
-(defn start-thread
-  [fn]
-  (.start
-   (Thread. fn)))
-
-(defn loop-print
-  [n]
-  (let [line (str n ":**********")]
-    (println line)
-    (Thread/sleep (rand 5))
-    (recur n)))
-
-(defn test-main []
-  (dotimes [n 50]
-    (start-thread #(loop-print n))))
-
-
-
-(def ^:private num-threads 1)
-(def ^:private pool (atom nil))
-(defn- thread-pool []
-  (swap! pool (fn [p] (or p (ScheduledThreadPoolExecutor. num-threads)))))
-(defn periodically
-  "Schedules function f to run every 'delay' milliseconds after a
-  delay of 'initial-delay'."
-  [f initial-delay delay]
-  (.scheduleWithFixedDelay (thread-pool)
-                           f
-                           initial-delay delay TimeUnit/MILLISECONDS))
-(defn shutdown
-  "Terminates all periodic tasks."
-  []
-  (swap! pool (fn [p] (when p (.shutdown p)))))
-
-
-
-
-
+          (if (.isAlive ai-thread)
+            (println "alive")
+            (println "dead"))
+          ;;wait for the next turn to be ready
+          (Thread/wait))))
+    (.stop ai-thread)
+    (println "killed")))
 
 (defn ai1
   "Takes in a partial functions, read and println, which are used to communicate with the official game world."
@@ -834,6 +661,190 @@ java.util.concurrent.TimeUnit/SECONDS
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       );;end initial setup
     )
+
+;; (let [player (player/new-player)
+;;       world-atom (world/reset-world)]
+;;   (platinum-rift.mimic/mprintln player "10 0" @world-atom)
+;;   ;; (platinum-rift.mimic/run-commands :placement world-atom)
+
+;;   (first @world-atom)
+;;   )
+
+
+;; (let [player (player/new-player)
+;;       ;; request "10 0"
+;;       request "WAIT"
+;;       world-agent (world/reset-world)]
+;;   (:id (player/new-player))
+;;   (platinum-rift.mimic/enqueue-command :placement (:id player) (partial place player request))
+;;   (second (first @platinum-rift.mimic/placement-commands))
+;;   (platinum-rift.mimic/run-commands :placement world-agent)
+
+;;   (let [res (first @platinum-rift.mimic/placement-commands)]
+;; (player/reset)
+;;     res)
+;;   )
+
+
+;; @platinum-rift.mimic/placement-commands
+
+
+
+
+;; ;;parts to recording functions
+;; ;;send request to mimic
+
+
+;; ;;create function to be called later
+;; ((first [(partial + 1) (partial + 2)])  2)
+
+;; (def move-commands (atom {0 []
+;;                             1 []
+;;                             2 []
+;;                             3 []}))
+;; (def placement-commands (atom {0 []
+;;                             1 []
+;;                             2 []
+;;                             3 []})) ;;requests made by the players to the game
+
+;; ;;call functions
+;; ;;[(fn [a] (println a))]
+;; (let [player (player/new-player)
+;;       placement-commands (atom {0 [(partial platinum-rift.mimic/place-test player [10 0])]
+;;                             1 []
+;;                             2 []
+;;                             3 []})
+;;       move-commands (atom {0 []
+;;                             1 []
+;;                             2 []
+;;                            3 []})
+;;       world-atom (world/reset-world)]
+
+;;   (platinum-rift.mimic/run-commands-test :placement world-atom placement-commands move-commands)
+;;  (player/reset)
+
+;;   )
+
+
+;; (condp = :things2
+;;     :placement "hi"
+;;     :movement "bye"
+;;     :things "stuff"
+;;      nil
+;;     )
+
+
+
+;; (let [def-fun (fn [& vars] (println vars) (println (reduce + vars)) (reduce + vars))
+;;       function-list [(partial def-fun 1) (partial def-fun 2)]]
+;;   (loop [func function-list]
+;;       ((first func ) 2)
+;;     (if (> (count func) 1)
+
+;;       (recur (next func))
+;;       ((first func) 2)
+;;       )))
+
+
+
+
+
+
+;; ;;some atom
+;; (def test-atom (atom []))
+
+;; ;;function to swap things
+;; (defn i-swap
+;;   [my-atom]
+;;   (swap! my-atom #(conj % 1))
+;;   15)
+
+
+
+
+
+
+
+
+;; java.lang.Thread.State/NEW
+;; java.util.concurrent.TimeUnit/SECONDS
+;; (let [things (Thread. ai1)])
+
+;; (def turn-keeper (agent [true true true true]))
+;; (send turn-keeper #(assoc % 2 true))
+
+;; (let [ai test-ai
+;;       read-q (atom [])
+;;       turn-time 100
+;;       turn-keeper (agent [true true true true])
+;;       player-number 0
+
+;;       num-players 4
+;;       game-world (world/new-world)
+;;       setup (partial setup num-players player-number game-world)]
+;; (swap! game-over (fn [_] false))
+;;   (run-player ai read-q turn-time turn-keeper player-number setup)
+
+  ;; (loop [times 5]
+  ;;   (when (> times 0)
+  ;;     (println "sleeping")
+  ;;     (Thread/sleep 1000)
+  ;;     (println "woke up")
+  ;;     (recur (dec times))))
+  )
+
+  ;; [num-players player-id game-world read-q]
+
+
+;; (defn test-ai
+;;   []
+;;     (println "waking up after 10 milliseconds")
+;;   (while true ;;(> (rand-int 100) 20)
+;;   (swap! some-atom #(inc %))
+;;     (Thread/sleep 10)
+;;     (println "waking up after 10 milliseconds")
+;;     )
+;;   )
+;; (def some-atom (atom 1))
+;; (.start (Thread. #(test-ai) ))
+;;  @some-atom
+;; (defn start-thread
+;;   [fn]
+;;   (.start
+;;    (Thread. fn)))
+
+;; (defn loop-print
+;;   [n]
+;;   (let [line (str n ":**********")]
+;;     (println line)
+;;     (Thread/sleep (rand 5))
+;;     (recur n)))
+
+;; (defn test-main []
+;;   (dotimes [n 50]
+;;     (start-thread #(loop-print n))))
+
+
+
+;; (def ^:private num-threads 1)
+;; (def ^:private pool (atom nil))
+;; (defn- thread-pool []
+;;   (swap! pool (fn [p] (or p (ScheduledThreadPoolExecutor. num-threads)))))
+;; (defn periodically
+;;   "Schedules function f to run every 'delay' milliseconds after a
+;;   delay of 'initial-delay'."
+;;   [f initial-delay delay]
+;;   (.scheduleWithFixedDelay (thread-pool)
+;;                            f
+;;                            initial-delay delay TimeUnit/MILLISECONDS))
+
+
+
+
+
+
+
+
 
 
 
