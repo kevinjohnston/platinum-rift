@@ -25,7 +25,10 @@
                             2 []
                             3 []}) ) ;;requests made by the players to the game
 
-  )
+)
+
+(def move-requests (atom [[[6 0 1]]  ["WAIT"] ["WAIT"] ["WAIT"]]))
+(def placement-requests (atom [[[6 0]]  [[3 0] [2 1]] ["WAIT"] ["WAIT"]]))
 
 (defn run-commands-orig
   [type world-atom]

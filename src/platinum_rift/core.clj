@@ -51,7 +51,6 @@
            ai-threads ai-list
            [official-world official-players] [(world/new-world) (create-players num-players 0)] ;;create world and players
            setup-funcs (map #(partial setup-first-turn num-players %1 %2 %3) info-queues (range num-players) [official-world official-players])]
-
       ;;let form to ease and clarify recur call
       (let [
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -85,183 +84,372 @@
   ;;kill any non-daemon threads
   (shutdown-agents))
 
-;;;;;;;;;;;;;;;;;;;;MOVEMENT
-      (let [moved-world (run-commands :movement official-world)]
-;;;;;;;;;;;;;;;;;;;;BUYING
-        (let [world-players (run-commands :placement official-world)
-              placed-world (first world-players)
-              placed-players (second world-players)]
-          ;;clear all commands
-          (reset-commands)
-
-          ))
-
-          (run-commands :placement official-world)
-;;;;;;;;;;;;;;;;;;;;FIGHTING
-          ;;TODO follow fight logic
-          (battle official-world)
-;;;;;;;;;;;;;;;;;;;;OWNING
-          ;;TODO update ownership in world
-          (own official-world)
-;;;;;;;;;;;;;;;;;;;;DISTRIBUTING INCOME
-          ;;TODO adjust player income
-          (distrib [official-player1
-                    official-player2
-                    official-player3
-                    official-player4]
-                   @official-world)
-          (if (< turn turn-limit))
-          (recur (inc turn)
-                 official-world
-                 official-players)
 
 
-      )
+;;move each player
+;;process each move request by that player
 
 
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SETUP ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn movement-phase
+  "Handles moving requests"
+  [[official-world official-players]]
+  ;;apply movement requests from each move queue
+  (loop [move-req @move-requests
+         player official-players
+         world official-world]
+    (if (empty? player)
+      [world official-players]
+      (recur
+       (next move-req)
+       (next player)
+       (loop [player-move-requests (first move-req)
+              next-world world]
+         (if (or (= (first player-move-requests) "WAIT") (empty? player-move-requests))
+           next-world ;;return processed world
+           (let [request (first player-move-requests)
+                 pods (first request)
+                 start (second request)
+                 dest (nth request 2)
+                 player-id (:id (first player))
+                 ;;at the given node get the current number of pods owned by the player
+                 current-pods (((next-world start) :pods) player-id)]
+             (when (< current-pods pods)
+             ;;record error if movement is not possible
+               (println "ERROR NOT ENOUGH PODS FOR MOVEMENT REQUEST"))
+             (recur (next player-move-requests)
+                        ;;move
+                        (assoc-in ;;add to new location...
+                         (assoc-in world [start :pods player-id] (- current-pods pods)) ;;..having removed from old location
+                         [dest :pods player-id] (+ (((next-world dest) :pods) player-id) pods))))))))))
 
-    (setup)
-    (await g-world s-world)
+(defn placement-phase
+  "Handles placement requests."
+  [[official-world official-players]]
+  ;;loop over each player
+  (loop [place-req @placement-requests
+         player-num 0
+         [world players] [official-world official-players]]
+    (if (>= player-num (count players))
+      [world players]
+      (recur
+       (next place-req)
+       (inc player-num)
+       ;;loop over each set of placement requests
+       (loop [player-place-req (first place-req)
+              [next-world players]  [world players]]
+         (if (or (= (first player-place-req) "WAIT") (empty? player-place-req))
+           [next-world players]
+           (let [request (first player-place-req)
+                 pods (first request)
+                 node (second request)
+                 ;;at the given node get the current number of pods owned by the player
+                 current-pods (((next-world node) :pods) player-num)
+                 current-plat (:platinum (nth players player-num))
+                 pod-plat-cost (* pod-cost pods)
+                 player (nth players player-num)
+                 [updated-world updated-player] (if (< current-plat pod-plat-cost)
+                                                  [next-world player] ;;no change
+                                                  [(assoc-in next-world [node :pods player-num] (+ pods current-pods))
+                                                    (assoc player :platinum (- current-plat pod-plat-cost))])]
+             (if (< current-plat pod-plat-cost)
+               (println "ERROR NOT ENOUGH PLATINUM FOR PLACEMENT REQUEST"))
+             (recur (next player-place-req)
+                    [updated-world (assoc players player-num updated-player)]))))))))
 
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAME CODE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-    (let [playerCount (mread) myId (mread) zoneCount (mread) linkCount (mread)
-          ;;create local players
-          players (create-players num-players 0)
-          ;; me (condp = myId
-          ;;      0 official-player1
-          ;;      1 official-player2
-          ;;      2 official-player3
-          ;;      3 official-player4)
-          ]
-      ;; playerCount: the amount of players (2 to 4)
-      ;; myId: my player ID (0, 1, 2 or 3)
-      ;; zoneCount: the amount of zones on the map
-      ;; linkCount: the amount of links between all zones
-      (loop [i zoneCount]
-        (when (> i 0)
-          (let [zoneId (mread) platinumSource (mread)]
-            ;; zoneId: this zone's ID (between 0 and zoneCount-1)
-            ;; platinumSource: the amount of Platinum this zone can provide per game turn
-            (send g-world #(graph/add-nodes % zoneId))
-            (send s-world #(conj % (world/new-node zoneId platinumSource)))
-            (recur (dec i)))))
-
-      (loop [i linkCount]
-        (when (> i 0)
-          (let [zone1 (mread) zone2 (mread)]
-            ;;record edge between nodes
-            (send g-world #(graph/add-edge % zone1 zone2))
-            ;;update liberties of both zones
-            (send s-world #(assoc-in % [zone1 :total-liberties] (inc (:total-liberties (nth % zone1)))))
-            (send s-world #(assoc-in % [zone2 :total-liberties] (inc (:total-liberties (nth % zone2)))))
-            (recur (dec i)))))
-
-      (await g-world s-world)
-      (when debug
-        (println "playerCount: " playerCount)
-        (println "myId: " myId)
-        (println "zoneCount: " zoneCount)
-        (println "linkCount: " linkCount))
-
-      ;;(while true -- game loop
-      (loop [turn 1
-             world game-world
-             players players]
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;turn init
-        (let [platinum (mread)
-              players (assoc-in players [myId :platinum] platinum)]
-          ;; (println "My platinum: " platinum)
-          ;; plawjktinum: my available Platinum
-          ;;update my available platinum
-
-          (loop [i zoneCount]
-            (when (> i 0)
-              (let [zId (mread) ownerId (mread) podsP0 (mread) podsP1 (mread) podsP2 (mread) podsP3 (mread)]
-                ;; zId: this zone's ID
-                ;; ownerId: the player who owns this zone (-1 otherwise)
-                ;; podsP0: player 0's PODs on this zone
-                ;; podsP1: player 1's PODs on this zone
-                ;; podsP2: player 2's PODs on this zone (always 0 for a two player game)
-                ;; podsP3: player 3's PODs on this zone (always 0 for a two or three player game)
-                (recur (dec i)))))
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-          ;;verify AI view of world matches actual world
-          (check-world (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) @s-world)
-                       (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) game-world))
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-          ;;basic turn structure
-
-          ;;determine where to move units
-          (let [movement (.trim (player/gen-move-message (player/det-move sight-radius (nth players myId) world)))
-                placement (.trim (player/gen-place-message (player/det-place (nth players myId) world)))  ]
-            ;; (println "global min: " (world/get-global-min @s-world))
-            (mprintln me movement @official-world)
-            (mprintln me placement @official-world)
-            ;;determine where to place units
-            ;;send commands
-            (when debug
-              (println "TURN: " turn)
-              (println "Movement: " movement)
-              (println "Placement: " placement)
-              (println "Player1 eval: " (player/evaluate (first players) turn))
-              (println "Player2 eval: " (player/evaluate (second players) turn))
-              ))
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;END AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GAME PHASES;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;MOVEMENT
-          ;;TODO process movement from AIs
-          (run-commands :movement official-world)
-;;;;;;;;;;;;;;;;;;;;BUYING
-          ;;TODO process placement from AIs
-          (run-commands :placement official-world)
-
-          ;;clear all commands
-          (reset-commands)
-;;;;;;;;;;;;;;;;;;;;FIGHTING
-          ;;TODO follow fight logic
-          (battle official-world)
-;;;;;;;;;;;;;;;;;;;;OWNING
-          ;;TODO update ownership in world
-          (own official-world)
-;;;;;;;;;;;;;;;;;;;;DISTRIBUTING INCOME
-          ;;TODO adjust player income
-          (distrib [official-player1
-                    official-player2
-                    official-player3
-                    official-player4]
-                   @official-world)
+(defn battle-phase
+  "Handles battle logic."
+  [[official-world official-players]]
+  ;;loop over each node in the world
+  (loop [node-id 0
+         [world players] [official-world official-players]]
+    (if (<= (count world) node-id)
+      [world players]
+      (recur (inc node-id)
+             (let [[updated-node updated-players]
+                   (loop [rounds-left max-fight-loop
+                          node (nth world node-id)
+                          updated-players players]
+                     (let [contested (< 1 (count (filter #(> % 0) (:pods node))))]
+                       (if (or (not contested)
+                               (= 0 rounds-left))
+                         [node updated-players]
+                         (recur (dec rounds-left)
+                                (assoc node :pods (map #(if (< 0 %) (dec %) %) (:pods node)))
+                                (loop [player updated-players
+                                       acc []]
+                                  (if (empty? player)
+                                    acc
+                                    (recur
+                                     (next player)
+                                     (conj acc (assoc-in (first player) [:pods node-id] (if (< 0 ((:pods (first player)) node-id))
+                                                                                          (dec ((:pods (first player)) node-id))
+                                                                                          ((:pods (first player)) node-id)))))))))))]
+               [(assoc world node-id updated-node)
+                updated-players])))))
 
 
+(battle-phase
+ [[{:id 0 :pods [2 1 0 0]} {:id 1 :pods [1 2 0 0]}] [{:id 0 :pods [2 1]} {:id 1 :pods [1 2]}]])
 
-          (if (< turn 200)
-            (recur (inc turn)
-                   @world/world
-                   players)))
-        ;;)-- end while loop
-        ))
-    (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")
-    (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAME OVER ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")
-    (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")))
+
+(nth [{:id 0 :pods [2 1 0 0]} {:id 1 :pods [2 1 0 0]}] 0)
+
+(create-players 2 0)
+
+(defn ownership-phase
+  "Handles updating ownership in the world"
+  [[official-world official-players]]
+  ;;loop over each node in the world
+  (loop [node-id 0
+         [updated-world updated-players] [official-world official-players]]
+    (if (>= node-id (count official-world))
+      [updated-world updated-players]
+      (recur (inc node-id)
+             ;;determine if node is
+             ;;1) NOT contested, and
+             ;;2) has at least one pod on it, and
+             ;;3) that pod is not by the player listed as owning it
+             (let [node (official-world node-id)
+                   not-contested (> 2 (count (filter #(> % 0) (:pods node))))
+                   occupying-player-id (loop [pos 0] (if ((:pods node) pos)
+                                                       pos
+                                                       (if (< pos (count official-players))
+                                                         (recur (inc pos))
+                                                         nil)))
+                   defeated-player-id (:owner node)]
+               (if (and not-contested
+                        occupying-player-id
+                        (not (= occupying-player-id defeated-player-id)))
+                 ;;all of the above is true, change ownership
+                 (change-ownership occupying-player-id defeated-player-id node-id [updated-world updated-players])
+                 ;;...otherwise node can keep current ownership
+                 [updated-world updated-players]))))))
+
+
+(defn change-ownership
+  "Helper function for ownership phase. Handles updating specific players and the world.
+  Takes in the ids of the player that gained the node, the player that lost the node (or nil if neutral) and the node gained/lost,
+  and a vector of players world.
+  Returns the updated players and world."
+  [player-gain-id player-loss-id node-id
+   [world players]]
+  (println "gain id: " player-gain-id)
+  (let [node (world node-id)
+        player-gain (players player-gain-id)
+        player-loss (if (nil? player-loss-id) nil (players player-loss-id))
+        player-adj-fn #(as-> %1 p
+                             (assoc p :income (%2 (:income p) (:income node)))
+                             (assoc p :liberties (%2 (:liberties p) (:liberties node)))
+                             (assoc p :territories (%2 (:territories p) 1)))
+        new-gain-players (assoc-in players [player-gain-id] (player-adj-fn player-gain +))
+        updated-world (assoc-in world [node-id]
+                                (as-> node n
+                                      (assoc n :owner player-gain-id)))]
+    (if (nil? player-loss)
+      ;;handle case that player gained from neutral (nil) player
+      [updated-world
+       new-gain-players]
+      ;;handle case that player conquered territory from another player
+      [updated-world
+       (assoc-in new-gain-players [player-loss-id] (player-adj-fn player-loss -))])))
+
+
+(defn distribution-phase
+  "Handles updating platinum for the players"
+  [[official-world official-players]])
+
+
+
+(placement-phase
+ [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
+  [{:id 0 :platinum 200} {:id 1 :platinum 200}]])
+(create-players 4 0)
+
+(first (first @move-requests ))
+
+(movement-phase
+ [[{:id 0 :source-value 0 :pods [5 3 2 5]}  {:id 1 :source-value 0 :pods [5 3 2 5]} ]
+  (create-players 4 0)])
+(:id (first (create-players 4 0) ))
+
+(first (world/new-world))
+;; ;;;;;;;;;;;;;;;;;;;;MOVEMENT
+;;       (let [moved-world (run-commands :movement official-world)]
+;; ;;;;;;;;;;;;;;;;;;;;BUYING
+;;         (let [world-players (run-commands :placement official-world)
+;;               placed-world (first world-players)
+;;               placed-players (second world-players)]
+;;           ;;clear all commands
+;;           (reset-commands)
+
+;;           ))
+
+;;           (run-commands :placement official-world)
+;; ;;;;;;;;;;;;;;;;;;;;FIGHTING
+;;           ;;TODO follow fight logic
+;;           (battle official-world)
+;; ;;;;;;;;;;;;;;;;;;;;OWNING
+;;           ;;TODO update ownership in world
+;;           (own official-world)
+;; ;;;;;;;;;;;;;;;;;;;;DISTRIBUTING INCOME
+;;           ;;TODO adjust player income
+;;           (distrib [official-player1
+;;                     official-player2
+;;                     official-player3
+;;                     official-player4]
+;;                    @official-world)
+;;           (if (< turn turn-limit))
+;;           (recur (inc turn)
+;;                  official-world
+;;                  official-players)
+
+
+;;       )
+
+
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SETUP ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;     (setup)
+;;     (await g-world s-world)
+
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAME CODE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;     (let [playerCount (mread) myId (mread) zoneCount (mread) linkCount (mread)
+;;           ;;create local players
+;;           players (create-players num-players 0)
+;;           ;; me (condp = myId
+;;           ;;      0 official-player1
+;;           ;;      1 official-player2
+;;           ;;      2 official-player3
+;;           ;;      3 official-player4)
+;;           ]
+;;       ;; playerCount: the amount of players (2 to 4)
+;;       ;; myId: my player ID (0, 1, 2 or 3)
+;;       ;; zoneCount: the amount of zones on the map
+;;       ;; linkCount: the amount of links between all zones
+;;       (loop [i zoneCount]
+;;         (when (> i 0)
+;;           (let [zoneId (mread) platinumSource (mread)]
+;;             ;; zoneId: this zone's ID (between 0 and zoneCount-1)
+;;             ;; platinumSource: the amount of Platinum this zone can provide per game turn
+;;             (send g-world #(graph/add-nodes % zoneId))
+;;             (send s-world #(conj % (world/new-node zoneId platinumSource)))
+;;             (recur (dec i)))))
+
+;;       (loop [i linkCount]
+;;         (when (> i 0)
+;;           (let [zone1 (mread) zone2 (mread)]
+;;             ;;record edge between nodes
+;;             (send g-world #(graph/add-edge % zone1 zone2))
+;;             ;;update liberties of both zones
+;;             (send s-world #(assoc-in % [zone1 :total-liberties] (inc (:total-liberties (nth % zone1)))))
+;;             (send s-world #(assoc-in % [zone2 :total-liberties] (inc (:total-liberties (nth % zone2)))))
+;;             (recur (dec i)))))
+
+;;       (await g-world s-world)
+;;       (when debug
+;;         (println "playerCount: " playerCount)
+;;         (println "myId: " myId)
+;;         (println "zoneCount: " zoneCount)
+;;         (println "linkCount: " linkCount))
+
+;;       ;;(while true -- game loop
+;;       (loop [turn 1
+;;              world game-world
+;;              players players]
+
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;turn init
+;;         (let [platinum (mread)
+;;               players (assoc-in players [myId :platinum] platinum)]
+;;           ;; (println "My platinum: " platinum)
+;;           ;; plawjktinum: my available Platinum
+;;           ;;update my available platinum
+
+;;           (loop [i zoneCount]
+;;             (when (> i 0)
+;;               (let [zId (mread) ownerId (mread) podsP0 (mread) podsP1 (mread) podsP2 (mread) podsP3 (mread)]
+;;                 ;; zId: this zone's ID
+;;                 ;; ownerId: the player who owns this zone (-1 otherwise)
+;;                 ;; podsP0: player 0's PODs on this zone
+;;                 ;; podsP1: player 1's PODs on this zone
+;;                 ;; podsP2: player 2's PODs on this zone (always 0 for a two player game)
+;;                 ;; podsP3: player 3's PODs on this zone (always 0 for a two or three player game)
+;;                 (recur (dec i)))))
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;           ;;verify AI view of world matches actual world
+;;           (check-world (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) @s-world)
+;;                        (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) game-world))
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;           ;;basic turn structure
+
+;;           ;;determine where to move units
+;;           (let [movement (.trim (player/gen-move-message (player/det-move sight-radius (nth players myId) world)))
+;;                 placement (.trim (player/gen-place-message (player/det-place (nth players myId) world)))  ]
+;;             ;; (println "global min: " (world/get-global-min @s-world))
+;;             (mprintln me movement @official-world)
+;;             (mprintln me placement @official-world)
+;;             ;;determine where to place units
+;;             ;;send commands
+;;             (when debug
+;;               (println "TURN: " turn)
+;;               (println "Movement: " movement)
+;;               (println "Placement: " placement)
+;;               (println "Player1 eval: " (player/evaluate (first players) turn))
+;;               (println "Player2 eval: " (player/evaluate (second players) turn))
+;;               ))
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;END AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GAME PHASES;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ;;;;;;;;;;;;;;;;;;;;MOVEMENT
+;;           ;;TODO process movement from AIs
+;;           (run-commands :movement official-world)
+;; ;;;;;;;;;;;;;;;;;;;;BUYING
+;;           ;;TODO process placement from AIs
+;;           (run-commands :placement official-world)
+
+;;           ;;clear all commands
+;;           (reset-commands)
+;; ;;;;;;;;;;;;;;;;;;;;FIGHTING
+;;           ;;TODO follow fight logic
+;;           (battle official-world)
+;; ;;;;;;;;;;;;;;;;;;;;OWNING
+;;           ;;TODO update ownership in world
+;;           (own official-world)
+;; ;;;;;;;;;;;;;;;;;;;;DISTRIBUTING INCOME
+;;           ;;TODO adjust player income
+;;           (distrib [official-player1
+;;                     official-player2
+;;                     official-player3
+;;                     official-player4]
+;;                    @official-world)
+
+
+
+;;           (if (< turn 200)
+;;             (recur (inc turn)
+;;                    @world/world
+;;                    players)))
+;;         ;;)-- end while loop
+;;         ))
+;;     (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")
+;;     (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAME OVER ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")
+;;     (println ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;")))
 
 
 (defn create-players
