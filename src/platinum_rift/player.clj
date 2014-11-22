@@ -46,55 +46,81 @@
   "Quantifies players position."
   [p1 turn]
   ;;todo make this useful
-  (+ (:platinum p1) (count (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
+  (+ (:platinum p1) (reduce + (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
 
 (defn new-player
   "Creates and returns a new player."
-  [id]
-  {:id id
-   :platinum starting-plat
-   :income 0
-   :territories 0 ;;determined every round
-   :liberties 0 ;;determind every round
-   ;;pods is a vector of vectors [node-id num-pods]
-   :pods []})
+  ([id] (new-player id num-nodes))
+  ([id num-nodes]
+     {:id id
+      :platinum starting-plat
+      :income 0
+      :territories 0 ;;determined every round
+      :liberties 0 ;;determind every round
+      ;;pods is a vector the nth value in pod corresponds to the nth node in the world,
+      ;;the value at that index is the number of pods the player has on that node
+      :pods (loop [pods 0
+                   acc []]
+              (if (< pods num-nodes)
+                (recur (inc pods)
+                       (conj acc 0))
+                acc))}))
 
-
-(defn reset
-  ""
-  []
-  (swap! next-id #(when % -1)))
 
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
   [sight p1 world]
+  (println "Determining move")
   ;;create a scalar map of the world and move each unit towards its local minimum
   (let [scalar-world (advisors/advise world p1 (advisors/get-advisors) sight)]
-    (loop [pods (:pods p1)
-           acc []]
+    ;; (println "Advised scalar world: " scalar-world)
+    (loop [i 0
+           pods (:pods p1)
+           outer-acc []]
+      ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
       (if (empty? pods)
-        acc ;;return moves
-        (recur (next pods)
-               ;;conj onto accumulator a movement of one pod along its path to its local min
-               (conj acc
-                    ;;or first tries to find the next node along the shortest path to the pods local minima
-                     [(or (second
+        outer-acc ;;return moves
+        (recur (inc i)
+               (next pods)
+               (reduce conj outer-acc (loop [pods-remaining (first pods)
+               acc []]
+;;                                   (println (str "Inner loop
+;; pods-remaining: " pods-remaining "
+;; acc: " acc))
+          (if (< 0 pods-remaining)
+            (recur (dec pods-remaining)
+                   (conj acc [1 i (second
                           ;;get shortest path
-                          (world/get-shortest-path (first (first pods)) ;;pods current position
+                          (world/get-shortest-path i ;;pods current position
                                                    ;;get node id of local minima
                                                    (:id (world/get-local-min sight
-                                                                              (first (first pods))
-                                                                              scalar-world))))
-                          ;;this second clause of the or will return the pods current node
-                          (first (first pods)))
-                      ;;move only one pod
-                      ]))))))
+                                                                              i
+                                                                              scalar-world))))]))
+            acc))))))))
+
+
+;; (recur (inc i)
+;;                (next pods)
+;;                ;;conj onto accumulator a movement of one pod along its path to its local min
+;;                (conj acc
+;;                     ;;or first tries to find the next node along the shortest path to the pods local minima
+;;                      [(or (second
+;;                           ;;get shortest path
+;;                           (world/get-shortest-path i ;;pods current position
+;;                                                    ;;get node id of local minima
+;;                                                    (:id (world/get-local-min sight
+;;                                                                               i
+;;                                                                               scalar-world))))
+;;                           ;;this second clause of the or will return the pods current node
+;;                           i)
+;;                       ;;move only one pod
+;;                       ]))
 
 
 (defn det-place
   "Determines where to place units. Does not combine information"
   [p1 world]
-    (println "pods: " (int (/ (:platinum p1) pod-cost)))
+  (println "Determining placement")
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
          acc []]

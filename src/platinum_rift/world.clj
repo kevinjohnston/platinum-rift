@@ -38,21 +38,21 @@
      {:id node-id
       :source-value 0 ;;reset at beginning of every turn
       :scalar-value 0 ;;recalculated from nearby source values every turn
-      :owner 1000 ;;id of player controlling this, neutral '1000' by default
+      :owner nil ;;id of player controlling this, neutral '1000' by default
       :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
       :total-liberties 0 ;;number of bordering nodes, never reset
-      :income 0
+      :income income
       :pods [0 0 0 0]}))
 
 (defn blank-world
   "Returns a zone map representing the whole world."
-  []
-  (loop [node-id 0
+  ([] (blank-world 154))
+  ([num-nodes] (loop [node-id 0
          acc []]
     (if (< node-id num-nodes)
       (recur (inc node-id)
              (conj acc (new-node node-id))) ;;add another node
-      acc)))
+      acc))))
 
 (defn add-income
   "Takes in the world (a vector of maps, one for each node)."
@@ -89,12 +89,13 @@
 
 (defn new-world
   ""
-  []
-  (add-income (blank-world))
-  (setup-graph-world)
-  ;;find all shortest paths
-  (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-  (add-income (blank-world)))
+  ([] (new-world 154))
+  ([num-nodes]
+     (add-income (blank-world num-nodes))
+     (setup-graph-world)
+     ;;find all shortest paths
+     (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
+     (add-income (blank-world))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

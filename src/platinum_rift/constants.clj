@@ -9,3 +9,4 @@
 (def max-res 200)
 (def max-inc 6)
 (def max-fight-loop 3)
+(def sight-radius 3)

@@ -3,6 +3,7 @@
             [platinum-rift.constants :refer :all]))
 
 (def banker-inf (atom 1))
+(def noise-inf (atom 1))
 (def unit-inf (atom 1))
 (def scalar-constant 1)
 (def friendly-constant (atom 1))
@@ -18,18 +19,43 @@
 (deftype banker []
   advisor
   (title [adv] "Banker")
-  (evaluate [adv node p1] (- (:income node)))
+  (evaluate [adv node p1]
+;;     (println "ADVISOR (BANKER)
+;; node: " node "
+;; p1: " p1)
+    (- (:income node)))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
+
+(deftype noise []
+  advisor
+  (title [adv] "Noise")
+  (evaluate [adv node p1]
+;;     (println "ADVISOR (BANKER)
+;; node: " node "
+;; p1: " p1)
+    (rand-int 3))
+  (influence [adv] @noise-inf)
+  (influence [adv adjust] (swap! noise-inf #(+ % adjust))))
 
 (deftype unit []
   advisor
   (title [adv] "Unit")
   (evaluate [adv node p1]
+;;     (println (str  "ADVISOR (UNIT)
+;; node: " node "
+;; p1: " p1))
+;;     (println (str "friendly constant: " @friendly-constant "
+;; enemy constant: " @enemy-constant))
     (loop [player-pods (:pods node)
            p-id 0
            acc 0]
-      (if (< p-id (count (:pods node))) ;;ensure we don't process players not in the game
+      ;; (println (str "player-pods: " player-pods))
+      ;; (println "p-id: " p-id)
+      ;; (println "acc: " acc)
+      ;; (println "enemy-const: " @enemy-constant)
+      (if (and (< p-id (count (:pods node))) ;;ensure we don't process players not in the game
+               (:pods node)) ;;ensure pods actually exist
         (recur
          (next player-pods)
          (inc p-id)
@@ -49,17 +75,18 @@
 (defn advise
   "Returns the world with source and scalar values modified by advisors."
   [world p1 advisors near-radius]
+  ;; (println "GETTING ADVICE ON WORLD: " world)
   (let [source-world
         ;;modify all source values
         (loop [wor world
                next-node 0]
-          (if (= next-node num-nodes)
+          (if (= next-node (count world))
             wor
             (recur (assoc-in wor
                              [next-node :source-value]
                              (loop [adv advisors
                                     acc 0]
-                               (if (= nil adv)
+                               (if (empty? adv)
                                  acc ;;gathered adjustment for each advisor return total
                                  ;;get more advice for node
                                  (recur (next adv) (+ acc (evaluate (first adv) (wor next-node) p1))))))
@@ -82,6 +109,7 @@
 (defn point-mod
   "Modifies a specific node and nearby nodes in a given radius"
   [world p1 node advisors near-radius]
+  ;; (println "Calling point-mod")
   (let [source-mod
         (loop [adv advisors
                acc 0]
@@ -98,8 +126,9 @@
         ;;modify the source value for the node
         source-world (assoc-in world
                                [(:id node) :source-value]
-                               source-mod)
-        ]
+                               source-mod)]
+    ;; (println "source-mod: " source-mod)
+    ;; (println "source-world: " source-world)
     ;;modify the scalar value for all near nodes
     (loop [world source-world
            nodes (map last (world/nearby-nodes near-radius (:id node))) ;;list of surrounding node ids
@@ -116,7 +145,7 @@
   "Returns a list of all advisors"
   []
   ;;(list (banker.) )
-  (list (banker.) (unit.))
+  (list (banker.) (unit.) (noise.))
   )
 
 (defn move-mod
