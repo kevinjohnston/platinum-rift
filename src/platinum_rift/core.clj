@@ -133,21 +133,28 @@ player-id: " player-id)))
        (inc player-num)
        ;;inner loop goes over each set of placement requests for a given player
        (loop [player-place-req (first place-req)
-              [next-world players]  [world players]]
+              [next-world next-players]  [world players]]
          (if (or (= (first player-place-req) "WAIT") (empty? player-place-req))
-           [next-world players] ;;return world/player reflecting this players placement requests
+           [next-world next-players] ;;return world/player reflecting this players placement requests
            (let [request (first player-place-req)
                  pods (first request)
                  node (second request)
                  ;;at the given node get the current number of pods owned by the player
                  current-pods (nth ((next-world node) :pods) player-num)
-                 current-plat (:platinum (nth players player-num))
+                 current-plat (:platinum (nth next-players player-num))
                  pod-plat-cost (* pod-cost pods)
-                 player (nth players player-num)
+                 player (nth next-players player-num)
+                 p (println node)
                  [updated-world updated-player] (if (< current-plat pod-plat-cost)
                                                   [next-world player] ;;no change
-                                                  [(assoc-in next-world [node :pods player-num] (+ pods current-pods))
-                                                    (assoc player :platinum (- current-plat pod-plat-cost))])]
+                                                  [(assoc-in
+                                                    next-world
+                                                    [node :pods player-num]
+                                                    (+ pods current-pods))
+                                                   (assoc-in
+                                                    (assoc player :platinum (- current-plat pod-plat-cost))
+                                                    [:pods node]
+                                                    (+ pods (nth (:pods player) node)))])]
              (if (< current-plat pod-plat-cost)
                (println (str  "ERROR NOT ENOUGH PLATINUM FOR PLACEMENT REQUEST
 placement requests: " place-req "
@@ -158,6 +165,17 @@ this req: " player-place-req))
                )
              (recur (next player-place-req)
                     [updated-world (assoc players player-num updated-player)])))))))))
+
+;; (assoc-in (assoc (first (create-players 1 0)) :platinum 5)
+;;                  [:pods 0]
+;;                  (inc (nth (:pods (first (create-players 1 0))) 0)))
+
+
+
+
+
+;; (inc (nth (:pods (first (create-players 1 0))) 0))
+
 
 (defn battle-phase
   "Handles battle logic."
@@ -523,7 +541,8 @@ this req: " player-place-req))
           ;;basic turn structure
           (recur (inc turn)
                  (loop [i zoneCount
-                        new-world turn-world]
+                        new-world turn-world
+                        new-players turn-players]
                    (if (> i 0)
                        ;;update world with new, official, info
                      (let [zId (read) ;; zId: this zone's ID
@@ -539,11 +558,20 @@ this req: " player-place-req))
                        ;; (println "PodsP3: " podsP3)
                        (recur (dec i)
                               (assoc new-world zId
-                                     (assoc (assoc (new-world zId) :owner ownerId) :pods [podsP0 podsP1 podsP2 podsP3]))))
+                                     (assoc (assoc (new-world zId) :owner ownerId) :pods [podsP0 podsP1 podsP2 podsP3]))
+                              (loop [players new-players
+                                     pods-vec [podsP0 podsP1 podsP2 podsP3]
+                                     acc []]
+                                (if (empty? players)
+                                         acc
+                                         (recur (next players)
+                                                (next pods-vec)
+                                                (conj acc
+                                                      (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
                      (let [advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius)
-                           movement (.trim (player/gen-move-message (player/det-move sight-radius (nth turn-players myId) advised-world)))
-                           placement (.trim (player/gen-place-message (player/det-place (nth turn-players myId) advised-world)))  ]
+                           movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world)))
+                           placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world)))]
                        (debug "Movement: " movement)
                        (debug "Placement: " placement)
                        ;;send commands
@@ -599,9 +627,8 @@ this req: " player-place-req))
       (println (str
        "
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TURN  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-" turn
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TURN " turn " ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
        "
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OFFICIAL PLAYERS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -638,11 +665,12 @@ this req: " player-place-req))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAME OVER ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Player: " (:id (first (sort-by :territories official-players ))) " Wins!
-Player1 territory: " (:territories (first official-players)) "
-Player2 territory: " (:territories (nth official-players 1)) "
-Player3 territory: " (if (< 2 (count (official-players))) (:territories (nth official-players 2)) "0")  "
-Player4 territory: " (if (< 3 (count (official-players))) (:territories (nth official-players 3)) "0"))))))) ;;next turns setup functions
+Player: " (:id (last (sort-by :territories official-players ))) " Wins!
+Player0 territory: " (:territories (first official-players)) "
+Player1 territory: " (:territories (nth official-players 1)) "
+Player2 territory: " (if (< 2 (count official-players)) (:territories (nth official-players 2)) "0")  "
+Player3 territory: " (if (< 3 (count official-players)) (:territories (nth official-players 3)) "0")
+                        )))))) ;;next turns setup functions
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END GAME LOOP ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

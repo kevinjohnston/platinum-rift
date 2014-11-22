@@ -40,7 +40,7 @@
 
 (defn enqueue-command
   [type p1 request]
-  (println "Enqueing request: " request " type: " type " for player num: " p1)
+  ;; (println "Enqueing request: " request " type: " type " for player num: " p1)
   (if (= type :movement)
     (swap! move-requests #(assoc-in % [p1] (conj (% p1) request)))
     (swap! placement-requests #(assoc-in % [p1] (conj (% p1) request)))))
@@ -48,7 +48,7 @@
 (defn mprintln
   "Mimics the functionality of the println function."
   [player-id request]
-  (println "REQUEST: " request)
+  ;; (println "REQUEST: " request)
   (swap! moved #(not %))
   (if @moved ;;determine if player has already moved this turn
     ;;process placement command

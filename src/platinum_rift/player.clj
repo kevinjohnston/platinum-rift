@@ -56,7 +56,7 @@
       :platinum starting-plat
       :income 0
       :territories 0 ;;determined every round
-      :liberties 0 ;;determind every round
+      :liberties 0 ;;determined every round
       ;;pods is a vector the nth value in pod corresponds to the nth node in the world,
       ;;the value at that index is the number of pods the player has on that node
       :pods (loop [pods 0
@@ -77,7 +77,7 @@
     (loop [i 0
            pods (:pods p1)
            outer-acc []]
-      ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
+    ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
       (if (empty? pods)
         outer-acc ;;return moves
         (recur (inc i)
@@ -97,25 +97,6 @@
                                                                               i
                                                                               scalar-world))))]))
             acc))))))))
-
-
-;; (recur (inc i)
-;;                (next pods)
-;;                ;;conj onto accumulator a movement of one pod along its path to its local min
-;;                (conj acc
-;;                     ;;or first tries to find the next node along the shortest path to the pods local minima
-;;                      [(or (second
-;;                           ;;get shortest path
-;;                           (world/get-shortest-path i ;;pods current position
-;;                                                    ;;get node id of local minima
-;;                                                    (:id (world/get-local-min sight
-;;                                                                               i
-;;                                                                               scalar-world))))
-;;                           ;;this second clause of the or will return the pods current node
-;;                           i)
-;;                       ;;move only one pod
-;;                       ]))
-
 
 (defn det-place
   "Determines where to place units. Does not combine information"
