@@ -300,41 +300,41 @@ unreachable from another node, the distance between the nodes is -1."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def pod-cost 20)
-(def starting-plat 200)
-(def debug true)
-(def starting-plat 200)
-(def num-nodes 154)
+;; (def starting-plat 200)
+;; (def debug true)
+;; (def starting-plat 200)
+;; (def num-nodes 154)
 (def standard-radius 3)
-(def max-res 200)
-(def max-inc 6)
-(def max-fight-loop 3)
+;; (def max-res 200)
+;; (def max-inc 6)
+;; (def max-fight-loop 3)
 (def sight-radius 3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(def world (atom []))
-(def graph-world (atom (graph/make-graph #{} {})))
+;; (def world (atom []))
+;; (def graph-world (atom (make-graph #{} {})))
 (def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
 
 (declare reset-world)
 
-(declare edge-vector)
+;; (declare edge-vector)
 (declare get-shortest-path)
 (declare find-short-paths)
 (declare nearby-nodes)
 
-(defn setup-graph-world
-  "Creates the defacto graph world, hopefully this is identical to the true game world (though logic shouldn't depend on it)."
-  []
-  (swap! graph-world #(when % (graph/make-graph #{} {})))
-  (swap! graph-world #(when %
-                        (loop [graph (reduce graph/add-nodes (graph/make-graph #{} {}) (range num-nodes)) ;;add all nodes
-                               edges edge-vector]
-                          (if (empty? edges)
-                            graph
-                            (recur (graph/add-edge graph (first (first edges)) (second (first edges))) ;;add all links
-                                   (next edges)))))))
+;; (defn setup-graph-world
+;;   "Creates the defacto graph world, hopefully this is identical to the true game world (though logic shouldn't depend on it)."
+;;   []
+;;   (swap! graph-world #(when % (make-graph #{} {})))
+;;   (swap! graph-world #(when %
+;;                         (loop [graph (reduce add-nodes (make-graph #{} {}) (range num-nodes)) ;;add all nodes
+;;                                edges edge-vector]
+;;                           (if (empty? edges)
+;;                             graph
+;;                             (recur (add-edge graph (first (first edges)) (second (first edges))) ;;add all links
+;;                                    (next edges)))))))
 
 
 (defn new-node
@@ -360,17 +360,17 @@ unreachable from another node, the distance between the nodes is -1."
              (conj acc (new-node node-id))) ;;add another node
       acc))))
 
-(defn add-income
-  "Takes in the world (a vector of maps, one for each node)."
-  [world]
-  (loop [res-remain max-res
-         next-node (rand-int num-nodes)
-         acc world]
-    (if (= 0 res-remain)
-      acc;;return the updated world
-      (if (>= (:income (world next-node)) max-inc)
-        (recur res-remain (rand-int num-nodes) acc)
-        (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))))))
+;; (defn add-income
+;;   "Takes in the world (a vector of maps, one for each node)."
+;;   [world]
+;;   (loop [res-remain max-res
+;;          next-node (rand-int num-nodes)
+;;          acc world]
+;;     (if (= 0 res-remain)
+;;       acc;;return the updated world
+;;       (if (>= (:income (world next-node)) max-inc)
+;;         (recur res-remain (rand-int num-nodes) acc)
+;;         (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))))))
 
 (defn node-liberties
   [node world]
@@ -384,35 +384,35 @@ unreachable from another node, the distance between the nodes is -1."
                   ;;get all bordering node ids
                   (map last (next (nearby-nodes 2 0))))))))
 
-(defn reset-world
-  ""
-  []
-  (swap! world (fn [_] (add-income (blank-world))))
-  (setup-graph-world)
-  ;;find all shortest paths
-  (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-  world)
+;; (defn reset-world
+;;   ""
+;;   []
+;;   (swap! world (fn [_] (add-income (blank-world))))
+;;   (setup-graph-world)
+;;   ;;find all shortest paths
+;;   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
+;;   world)
 
-(defn new-world
-  ""
-  ([] (new-world 154))
-  ([num-nodes]
-     (add-income (blank-world num-nodes))
-     (setup-graph-world)
-     ;;find all shortest paths
-     (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-     (add-income (blank-world))))
+;; (defn new-world
+;;   ""
+;;   ([] (new-world 154))
+;;   ([num-nodes]
+;;      (add-income (blank-world num-nodes))
+;;      (setup-graph-world)
+;;      ;;find all shortest paths
+;;      (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
+;;      (add-income (blank-world))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn find-short-paths
-  [graph]
+  [graph num-nodes]
   (loop [node num-nodes
          acc {}]
     (if (< node 0)
       acc
       (recur (dec node)
-             (assoc acc node (sort-by count (graph/breadth-first-traversal-with-path graph node)))))))
+             (assoc acc node (sort-by count (breadth-first-traversal-with-path graph node)))))))
 
 (defn nearby-nodes
   "Returns all paths with distance <= radius from given origin-node."
@@ -446,9 +446,12 @@ unreachable from another node, the distance between the nodes is -1."
 (def banker-inf (atom 1))
 (def noise-inf (atom 1))
 (def unit-inf (atom 1))
+(def territory-inf (atom 1))
+(def friendly-terr-constant (atom 5))
+(def enemy-terr-constant (atom (- 1)))
 (def scalar-constant 1)
 (def friendly-constant (atom 1))
-(def enemy-constant (atom 1))
+(def enemy-constant (atom (- 1)))
 
 (defprotocol advisor
   "Protocol for evaluating board."
@@ -507,6 +510,16 @@ unreachable from another node, the distance between the nodes is -1."
   (influence [adv] @unit-inf)
   (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
 
+(deftype territory []
+  advisor
+  (title [adv] "Territory")
+  (evaluate [adv node p1]
+    (if (= (:id p1) (:owner node))
+      @friendly-terr-constant
+      @enemy-terr-constant))
+  (influence [adv] @unit-inf)
+  (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
+
 (defn src-to-scal
   "Converts a source value to its scalar value at a given distance"
   [source distance]
@@ -534,18 +547,17 @@ unreachable from another node, the distance between the nodes is -1."
                    (inc next-node))))]
     ;;modify all scalar values
     (loop [acc source-world
-           next-node 0]
-      (if (= next-node num-nodes)
+           next-node (count source-world)]
+      (if (< next-node 0)
         acc
-        (let [nearby-nodes-paths (world/nearby-nodes near-radius next-node) ;;only care about nodes within this step distance
+        (let [nearby-nodes-paths (nearby-nodes near-radius next-node) ;;only care about nodes within this step distance
               nearby-source-node-ids (map last nearby-nodes-paths) ;;get id's for nearby nodes
               nearby-source-node-distances (map count nearby-nodes-paths) ;;get distances to those nodes
               nearby-source-node-vals (map (fn [src-node] (:source-value src-node)) (map acc nearby-source-node-ids)) ;;get the source values (from above)
               ;;get the total scalar components by summing contribution from nearby sources
-              scalar-val (reduce + (map src-to-scal nearby-source-node-vals nearby-source-node-distances))
-              ]
+              scalar-val (reduce + (map src-to-scal nearby-source-node-vals nearby-source-node-distances))]
           (recur (assoc-in acc [next-node :scalar-value] scalar-val) ;;return world with scalar-value added in
-                 (inc next-node)))))))
+                 (dec next-node)))))))
 
 (defn point-mod
   "Modifies a specific node and nearby nodes in a given radius"
@@ -562,7 +574,7 @@ unreachable from another node, the distance between the nodes is -1."
              (+ acc
                 (evaluate
                  (first adv)
-                 (world (:id node))
+                 (nth world (:id node))
                  p1)))))
         ;;modify the source value for the node
         source-world (assoc-in world
@@ -572,8 +584,8 @@ unreachable from another node, the distance between the nodes is -1."
     ;; (println "source-world: " source-world)
     ;;modify the scalar value for all near nodes
     (loop [world source-world
-           nodes (map last (world/nearby-nodes near-radius (:id node))) ;;list of surrounding node ids
-           distances (map count (world/nearby-nodes near-radius (:id node)))] ;;list of distances to surrounding nodes
+           nodes (map last (nearby-nodes near-radius (:id node))) ;;list of surrounding node ids
+           distances (map count (nearby-nodes near-radius (:id node)))] ;;list of distances to surrounding nodes
       (if (empty? nodes)
         world
         (recur (assoc-in world
@@ -586,8 +598,7 @@ unreachable from another node, the distance between the nodes is -1."
   "Returns a list of all advisors"
   []
   ;;(list (banker.) )
-  (list (banker.) (unit.) (noise.))
-  )
+  (list (banker.) (unit.) (territory.)));;(noise.)
 
 (defn move-mod
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."
@@ -630,8 +641,7 @@ unreachable from another node, the distance between the nodes is -1."
 
 (defn new-player
   "Creates and returns a new player."
-  ([id] (new-player id num-nodes))
-  ([id num-nodes]
+  [id num-nodes starting-plat]
      {:id id
       :platinum starting-plat
       :income 0
@@ -644,55 +654,71 @@ unreachable from another node, the distance between the nodes is -1."
               (if (< pods num-nodes)
                 (recur (inc pods)
                        (conj acc 0))
-                acc))}))
+                acc))})
 
 
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
-  [sight p1 world]
-  (println "Determining move")
+  [sight p1 scalar-world]
+  ;; (println "Determining move")
   ;;create a scalar map of the world and move each unit towards its local minimum
-  (let [scalar-world (advisors/advise world p1 (advisors/get-advisors) sight)]
-    ;; (println "Advised scalar world: " scalar-world)
-    (loop [i 0
-           pods (:pods p1)
-           outer-acc []]
+  ;; (let [scalar-world (advise world p1 (get-advisors) sight)]
+  ;; (println "Advised scalar world: " scalar-world)
+  (loop [i 0
+         pods (:pods p1)
+         outer-acc []]
     ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
-      (if (empty? pods)
-        outer-acc ;;return moves
-        (recur (inc i)
-               (next pods)
-               (reduce conj outer-acc (loop [pods-remaining (first pods)
-               acc []]
-;;                                   (println (str "Inner loop
-;; pods-remaining: " pods-remaining "
-;; acc: " acc))
-          (if (< 0 pods-remaining)
-            (recur (dec pods-remaining)
-                   (conj acc [1 i (second
-                          ;;get shortest path
-                          (world/get-shortest-path i ;;pods current position
-                                                   ;;get node id of local minima
-                                                   (:id (world/get-local-min sight
-                                                                              i
-                                                                              scalar-world))))]))
-            acc))))))))
+    (if (empty? pods)
+      outer-acc ;;return moves
+      (recur (inc i)
+             (next pods)
+             (reduce conj outer-acc (loop [pods-remaining (first pods)
+                                           acc []]
+                                      ;;                                   (println (str "Inner loop
+                                      ;; pods-remaining: " pods-remaining "
+                                      ;; acc: " acc))
+;;                                       (if (nil? (get-shortest-path i (:id (get-local-min sight
+;;                                                                                                       i
+;;                                                                                                       scalar-world))))
+;;                                         (println (str "Get shortest path is nil for i: " i " in world:
+;; " scalar-world)))
+                                      (if (< 0 pods-remaining)
+                                        (recur (dec pods-remaining)
+                                               (conj acc [1 i (if (nil? (second
+                                                               ;;get shortest path
+                                                               (get-shortest-path i ;;pods current position
+                                                                                  ;;get node id of local minima
+                                                                                  (:id (get-local-min sight
+                                                                                                      i
+                                                                                                      scalar-world)))))
+                                                                i
+                                                                (second
+                                                               ;;get shortest path
+                                                               (get-shortest-path i ;;pods current position
+                                                                                  ;;get node id of local minima
+                                                                                  (:id (get-local-min sight
+                                                                                                      i
+                                                                                                      scalar-world)))))]))
+                                        acc)))))))
+
 
 (defn det-place
   "Determines where to place units. Does not combine information"
   [p1 world]
-  (println "Determining placement")
+  (let [filtered-world (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  world) ;;world;;
+        ]
+  ;; (println "Determining placement")
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
          acc []]
     (if (= 0 pods)
       acc
       ;;recur with point modified map and one less pod
-      (let [global-min (world/get-global-min wor)]
-        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) standard-radius)
+      (let [global-min (get-global-min filtered-world)]
+        (recur (point-mod wor p1 global-min (get-advisors) standard-radius)
                (dec pods) ;;decrease pods available by 1
                ;;place a pod at global minima
-               (conj acc [1 (:id global-min)]))))))
+               (conj acc [1 (:id global-min)])))))))
 
 (defn comp-move
   "Compares if two move vectors can be combined, returns the combination if so."
@@ -723,6 +749,8 @@ unreachable from another node, the distance between the nodes is -1."
 (defn v-to-msg
   "Converts a vector into a string message."
   [vector]
+;;   (if (= 0 (rand-int 5)) (println "Printing test:
+;; " vector))
   (loop [acc ""
          v vector]
     (if (empty? v)
@@ -733,6 +761,7 @@ unreachable from another node, the distance between the nodes is -1."
 (defn gen-move-message
   "Returns a string to move units."
   [unit-move-vector]
+  ;; (if (= 0 (rand-int 5)) (println unit-move-vector))
   (if (or (empty? unit-move-vector) (= nil (first unit-move-vector)))
     "WAIT"
     (v-to-msg (combine-vectors unit-move-vector))))
@@ -747,34 +776,48 @@ unreachable from another node, the distance between the nodes is -1."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; AI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn create-players
+  "Returns a list of players"
+  [num starting-id num-nodes starting-plat]
+     (loop [more num
+            id starting-id
+            acc []]
+       (if (= more 0)
+         acc
+         (recur (dec more)
+                (inc id)
+                (conj acc (new-player id num-nodes starting-plat))))))
 
 (defn -main [& args]
     (let [playerCount (read) myId (read) zoneCount (read) linkCount (read)
           sight-radius 3
+          starting-plat 200
           ;;create local players
-          players (create-players playerCount 0)
+          players (create-players playerCount 0 zoneCount starting-plat)
           [graph-world node-world] (loop [i linkCount
                                           [g-world n-world] (loop [i zoneCount
-                                                                   g-world (graph/make-graph #{} {})
-                                                                   n-world []]
+                                                                   inner-g-world (make-graph #{} {})
+                                                                   inner-n-world []]
                                                               (if (> i 0)
                                                                 (let [zoneId (read) platinumSource (read)]
                                                                   ;; zoneId: this zone's ID (between 0 and zoneCount-1)
                                                                   ;; platinumSource: the amount of Platinum this zone can provide per game turn
                                                                   (recur (dec i)
-                                                                         (graph/add-nodes g-world zoneId)
-                                                                         (conj n-world (world/new-node zoneId platinumSource))))
-                                                                [g-world n-world]))]
+                                                                         (add-nodes inner-g-world zoneId)
+                                                                         (conj inner-n-world (new-node zoneId platinumSource))))
+                                                                [inner-g-world inner-n-world]))]
                                      (if (> i 0)
                                        (let [zone1 (read) zone2 (read)]
                                          ;;record edge between nodes
                                          ;;update liberties of both zones
                                          (recur (dec i)
-                                                [(graph/add-edge g-world zone1 zone2)
+                                                [(add-edge g-world zone1 zone2)
                                                  (assoc-in
                                                   (assoc-in n-world [zone1 :total-liberties] (inc (:total-liberties (nth n-world zone1))))
                                                   [zone2 :total-liberties] (inc (:total-liberties (nth n-world zone2))))]))
                                        [g-world n-world]))]
+      (swap! shortest-paths (fn [_] (find-short-paths graph-world zoneCount)))
+      ;; (println "shortest paths: " @shortest-paths)
       ;; (debug "got here1")
       ;; (when debug
       ;;   (println "playerCount: " playerCount)
@@ -793,7 +836,6 @@ unreachable from another node, the distance between the nodes is -1."
 ;; turn-players: " turn-players)
 
           ;; (debug "got here 2")
-
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           ;;verify AI view of world matches actual world
@@ -834,551 +876,23 @@ unreachable from another node, the distance between the nodes is -1."
                                                 (conj acc
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
-                     (let [advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius)
-                           movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world)))
-                           placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world)))]
-                       (debug "Movement: " movement)
-                       (debug "Placement: " placement)
+                     (let [advised-world (advise new-world (nth turn-players myId) (get-advisors) sight-radius)
+                           movement (.trim (gen-move-message (det-move sight-radius (nth new-players myId) advised-world)))
+                           placement (.trim (gen-place-message (det-place (nth new-players myId) advised-world)))]
+                       (println movement)
+                       (println placement)
+                       ;; (println "WAIT")
+                       ;; (println (str 1 " " (- (count graph-world) 1)))
                        ;;send commands
-                       (debug (str "movement result: " (println movement)))
-                       (debug (str "placement result: " (println placement)))
+                       ;; (debug (str "movement result: " (println movement)))
+                       ;; (debug (str "placement result: " (println placement)))
                        ;;determine where to place units
                        ;; (when debug
                        ;;   (println "TURN: " turn)
                        ;;   (println "Movement: " movement)
                        ;;   (println "Placement: " placement)
-                       ;;   (println "Player1 eval: " (player/evaluate (first players) turn))
-                       ;;   (println "Player2 eval: " (player/evaluate (second players) turn)))
+                       ;;   (println "Player1 eval: " (evaluate (first players) turn))
+                       ;;   (println "Player2 eval: " (evaluate (second players) turn)))
                        ;; (debug "next turns world: " new-world)
                        new-world)))
                  (assoc-in turn-players [myId :platinum] (read))))))) ;;next turns platinum
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(def edge-vector
-  [[0 1]
-
-   [1 2]
-   [1 3]
-
-   [2 7]
-
-   [3 4]
-   [3 8]
-
-   [4 8]
-   [4 9]
-   [4 5]
-
-   [5 9]
-   [5 10]
-   [5 6]
-
-   [6 10]
-   [6 11]
-
-   [7 8]
-   [7 13]
-   [7 14]
-
-   [8 9]
-   [8 14]
-   [8 15]
-
-   [9 10]
-   [9 15]
-   [9 16]
-
-   [10 11]
-   [10 16]
-   [10 17]
-
-   [11 12]
-   [11 17]
-
-   [12 18]
-
-   [13 14]
-   [13 19]
-   [13 20]
-
-   [14 15]
-   [14 20]
-   [14 21]
-
-   [15 16]
-   [15 21]
-   [15 22]
-
-   [16 17]
-   [16 22]
-   [16 23]
-
-   [7 23]
-
-   [18 24]
-
-   [19 20]
-   [19 27]
-
-   [20 21]
-   [20 27]
-   [20 28]
-
-   [21 22]
-   [21 28]
-   [21 29]
-
-   [22 23]
-   [22 29]
-
-   ;;23
-
-   [24 25]
-   [24 30]
-
-   [25 26]
-   [25 30]
-   [25 31]
-
-   [26 31]
-   [26 32]
-
-   [27 28]
-   [27 37]
-
-   [28 29]
-   [28 38]
-
-   [29 38]
-
-   [30 31]
-   [30 39]
-
-   [31 32]
-   [31 39]
-   [31 40]
-
-   [32 33]
-   [32 40]
-   [32 41]
-
-   [33 34]
-   [33 41]
-   [33 42]
-
-   [34 35]
-   [34 42]
-
-   [35 36]
-
-   ;;36
-
-   [37 43]
-
-   ;;38
-
-   [39 40]
-   [39 44]
-
-   [40 41]
-   [40 44]
-   [40 45]
-
-   [41 42]
-   [41 45]
-
-   ;;42
-
-   [43 46]
-
-   [44 45]
-
-   ;;45
-
-   [46 47]
-   [46 48]
-   [46 49]
-   ;;47
-
-   [48 49]
-
-   ;;49
-
-   [50 51]
-   [50 54]
-   [50 55]
-
-   [51 55]
-   [51 56]
-
-   [52 53]
-   [52 59]
-
-   [53 59]
-
-   [54 55]
-   [54 60]
-   [54 61]
-
-   [55 56]
-   [55 61]
-   [55 62]
-
-   [56 62]
-   [56 63]
-
-   [57 67]
-
-   [58 68]
-
-   [59 69]
-   [59 70]
-
-   [60 61]
-   [60 71]
-
-   [61 62]
-   [61 71]
-   [61 72]
-
-   [62 63]
-   [62 72]
-   [62 73]
-
-   [63 64]
-   [63 73]
-   [63 74]
-
-   [64 65]
-   [64 74]
-   [64 75]
-
-   [65 66]
-   [65 75]
-   [65 76]
-
-   [66 76]
-   [66 77]
-
-   [67 78]
-
-   [68 69]
-   [68 79]
-
-   [69 70]
-   [69 79]
-   [69 80]
-
-   [70 80]
-   [70 81]
-
-   [71 72]
-   [71 82]
-   [71 83]
-
-   [72 73]
-   [72 83]
-   [72 84]
-
-   [73 74]
-   [73 84]
-   [73 85]
-
-   [74 75]
-   [74 85]
-   [74 86]
-
-   [75 76]
-   [75 86]
-   [75 87]
-
-   [76 77]
-   [76 87]
-   [76 88]
-
-   [77 88]
-
-   [78 89]
-
-   [79 80]
-   [79 90]
-   [79 91]
-
-   [80 81]
-   [80 91]
-   [80 92]
-
-   [81 82]
-   [81 92]
-   [81 93]
-
-   [82 83]
-   [82 93]
-   [82 94]
-
-   [83 84]
-   [83 94]
-   [83 95]
-
-   [84 85]
-   [84 95]
-   [84 96]
-
-   [85 86]
-   [85 96]
-
-   [86 87]
-
-   [87 88]
-
-   ;;88
-
-   [89 97]
-
-   [90 91]
-   [90 98]
-   [90 99]
-
-   [91 92]
-   [91 99]
-   [91 100]
-
-   [92 93]
-   [92 100]
-   [92 101]
-
-   [93 94]
-   [93 101]
-   [93 102]
-
-   [94 95]
-   [94 102]
-   [94 103]
-
-   [95 96]
-   [95 103]
-
-   ;;96
-
-   [97 104]
-
-   [98 99]
-   [98 105]
-   [98 106]
-
-   [99 100]
-   [99 106]
-   [99 107]
-
-   [100 101]
-   [100 107]
-   [100 108]
-
-   [101 102]
-   [101 108]
-   [101 109]
-
-   [102 103]
-   [102 108]
-   [102 110]
-
-   [103 110]
-   [103 111]
-
-   [104 113]
-
-   [105 106]
-   [105 114]
-
-   [106 107]
-   [106 114]
-   [106 115]
-
-   [107 108]
-   [107 115]
-   [107 116]
-
-   [108 109]
-   [108 116]
-   [108 117]
-
-   [109 110]
-   [109 117]
-   [109 118]
-
-   [110 111]
-   [110 118]
-   [110 119]
-
-   [111 112]
-   [111 119]
-
-   ;;112
-
-   ;;113
-
-   [114 115]
-   [114 120]
-
-   [115 116]
-   [115 120]
-   [115 121]
-
-   [116 117]
-   [116 121]
-   [116 122]
-
-   [117 118]
-   [117 122]
-   [117 123]
-
-   [118 119]
-   [118 123]
-   [118 124]
-
-   [119 124]
-   [119 125]
-
-   [120 121]
-   [120 128]
-   [120 129]
-
-   [121 122]
-   [121 129]
-   [121 130]
-
-   [122 123]
-   [122 130]
-   [122 131]
-
-   [123 124]
-   [123 131]
-   [123 132]
-
-   [124 125]
-   [124 132]
-   [124 133]
-
-   [125 126]
-   [125 133]
-
-   [126 127]
-
-   [127 134]
-
-   [128 129]
-   [128 137]
-
-   [129 130]
-   [129 137]
-
-   [130 131]
-
-   [131 132]
-
-   [132 133]
-
-   ;;133
-
-   [134 138]
-
-   [135 136]
-   [135 139]
-   [135 140]
-
-   [136 140]
-
-   [137 141]
-   [137 142]
-
-   [138 139]
-   [138 144]
-
-   [139 140]
-   [139 145]
-
-   [140 145]
-   [140 146]
-
-   [141 142]
-   [141 148]
-
-   [142 148]
-
-   [143 150]
-
-   [144 151]
-
-   [145 146]
-
-   [146 147]
-
-   [147 152]
-
-   ;;148
-
-   [149 150]
-
-   ;;150
-
-   ;;151
-
-   [152 153]
-
-   ;;153
-   ])
