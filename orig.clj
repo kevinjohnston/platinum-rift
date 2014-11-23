@@ -659,32 +659,40 @@ unreachable from another node, the distance between the nodes is -1."
 
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
-  [sight p1 world]
+  [sight p1 scalar-world]
+  ;; (println "Determining move")
+  ;;create a scalar map of the world and move each unit towards its local minimum
+  ;; (let [scalar-world (advise world p1 (get-advisors) sight)]
+  ;; (println "Advised scalar world: " scalar-world)
   (loop [i 0
          pods (:pods p1)
          outer-acc []]
+    ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
     (if (empty? pods)
       outer-acc ;;return moves
       (recur (inc i)
              (next pods)
              (reduce conj outer-acc (loop [pods-remaining (first pods)
-                                           inner-world world
                                            acc []]
+                                    
                                       (if (< 0 pods-remaining)
-                                        ;;get shortest path
-                                        (let [minima (second
-                                                      ;;get shortest path
-                                                      (get-shortest-path i ;;pods current position
-                                                                         ;;get node id of local minima
-                                                                         (:id (get-local-min sight
-                                                                                             i
-                                                                                             inner-world))))
-                                              next-node (if (nil? minima) i minima)]
-                                          (recur (dec pods-remaining)
-                                                 (point-mod inner-world p1 (nth inner-world next-node) (get-advisors) standard-radius)
-                                                 (conj acc [1 i next-node])))
+                                        (recur (dec pods-remaining)
+                                               (conj acc [1 i (if (nil? (second
+                                                               ;;get shortest path
+                                                               (get-shortest-path i ;;pods current position
+                                                                                  ;;get node id of local minima
+                                                                                  (:id (get-local-min sight
+                                                                                                      i
+                                                                                                      scalar-world)))))
+                                                                i
+                                                                (second
+                                                               ;;get shortest path
+                                                               (get-shortest-path i ;;pods current position
+                                                                                  ;;get node id of local minima
+                                                                                  (:id (get-local-min sight
+                                                                                                      i
+                                                                                                      scalar-world)))))]))
                                         acc)))))))
-
 
 
 (defn det-place
