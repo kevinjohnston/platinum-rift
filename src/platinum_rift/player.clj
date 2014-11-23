@@ -83,20 +83,22 @@
         (recur (inc i)
                (next pods)
                (reduce conj outer-acc (loop [pods-remaining (first pods)
-               acc []]
-;;                                   (println (str "Inner loop
-;; pods-remaining: " pods-remaining "
-;; acc: " acc))
-          (if (< 0 pods-remaining)
-            (recur (dec pods-remaining)
-                   (conj acc [1 i (second
-                          ;;get shortest path
-                          (world/get-shortest-path i ;;pods current position
-                                                   ;;get node id of local minima
-                                                   (:id (world/get-local-min sight
-                                                                              i
-                                                                              scalar-world))))]))
-            acc))))))))
+                                             inner-world world
+                                             acc []]
+                                        ;;                                   (println (str "Inner loop
+                                        ;; pods-remaining: " pods-remaining "
+                                        ;; acc: " acc))
+                                        (if (< 0 pods-remaining)
+                                          ;;get shortest path
+                                          (let [next-node (world/get-shortest-path i ;;pods current position
+                                                                                   ;;get node id of local minima
+                                                                                   (:id (world/get-local-min sight
+                                                                                                             i
+                                                                                                             scalar-world)))]
+                                            (recur (dec pods-remaining)
+                                                   (advisors/point-mod inner-world p1 (second next-node) (advisors/get-advisors) standard-radius)
+                                                   (conj acc [1 i (second next-node)])))
+                                          acc))))))))
 
 (defn det-place
   "Determines where to place units. Does not combine information"

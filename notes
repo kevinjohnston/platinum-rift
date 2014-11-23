@@ -416,3 +416,13 @@ run-player signature
 (turn-time info-q ai-thread player-id setup) -> (ai-thread)
 
 setup-signature (defined)
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; New feature ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+point update movement, make the det-move method update the world after each move before recomputing the local min around the next pod
