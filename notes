@@ -424,5 +424,11 @@ setup-signature (defined)
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; New feature ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Completed feature ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 point update movement, make the det-move method update the world after each move before recomputing the local min around the next pod
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; New feature ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+evaluate change in player strength and adjust advisor influence at the end of every turn
+use minimax to determing starting pod placement
+fade confidence in advisor strength adjustments every turn
+forget about continents completely conquered by any non neutral player
