@@ -232,7 +232,7 @@ this req: " player-place-req))
   ;; (println "loss id: " player-loss-id)
   (let [node (world node-id)
         player-gain (players player-gain-id)
-        player-loss (if (nil? player-loss-id) nil (players player-loss-id))
+        player-loss (if (= -1 player-loss-id) nil (players player-loss-id))
         player-adj-fn #(as-> %1 p
                              (assoc p :income (%2 (:income p) (:income node)))
                              (assoc p :liberties (%2 (:liberties p) (:total-liberties node)))
@@ -322,11 +322,11 @@ this req: " player-place-req))
       [official-world updated-players]
       ;;clarify code with let assignment
       (let [node (first nodes)
-            owning-player (if (:owner node) (updated-players (:owner node)) nil)
+            owning-player (if (not (= (:owner node) -1)) (updated-players (:owner node)) nil)
             player-id (:owner node)
             current-plat (if (:owner node) (:platinum owning-player))]
       (recur (next nodes)
-             (if (:owner node) ;;only adjust player income if node is actually owned by someone
+             (if (not (= (:owner node) -1)) ;;only adjust player income if node is actually owned by someone
                (assoc-in updated-players [player-id :platinum] (+ current-plat (:income node)))
                updated-players))))))
 
@@ -509,7 +509,22 @@ this req: " player-place-req))
                                                  (assoc-in
                                                   (assoc-in n-world [zone1 :total-liberties] (inc (:total-liberties (nth n-world zone1))))
                                                   [zone2 :total-liberties] (inc (:total-liberties (nth n-world zone2))))]))
-                                       [g-world n-world]))]
+                                       [g-world n-world]))
+          ;;determine how the world is divided into unique areas
+          conts (world/get-continents node-world)
+          ;;create a map of zone-id : continent-number
+          conts-lookup-map (loop [next-cont (dec (count conts))
+                                  acc {}]
+                             (if (< next-cont 0)
+                               acc
+                               (recur
+                                (dec next-cont)
+                                (loop [nodes (nth conts next-cont)
+                                       inner-acc acc]
+                                  (if (empty? nodes)
+                                    inner-acc
+                                    (recur (next nodes)
+                                           (assoc inner-acc (:id (first nodes)) next-cont)))))))]
       ;; (debug "got here1")
       ;; (when debug
       ;;   (println "playerCount: " playerCount)
@@ -521,6 +536,9 @@ this req: " player-place-req))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       (while true
         (loop [turn 1
+               ;;a vector of vectors of numbers, the inner vector of numbers contains ai weights,
+               ;;the outer vector contains that set of ai weights for a each continent
+               ai-weights [[1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]]]
                turn-world node-world
                turn-players (let [platinum (read)] (assoc-in players [myId :platinum] platinum))]
 ;;           (debug "TURN: " turn " MYID: " myId "
@@ -528,6 +546,16 @@ this req: " player-place-req))
 ;; turn-players: " turn-players)
 
           ;; (debug "got here 2")
+
+
+;; (def banker-inf (atom 1))
+;; (def noise-inf (atom 1))
+;; (def unit-inf (atom 1))
+;; (def scalar-constant 1)
+;; (def friendly-constant (atom 1))
+;; (def enemy-constant (atom 1))
+
+
 
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -540,6 +568,7 @@ this req: " player-place-req))
 
           ;;basic turn structure
           (recur (inc turn)
+                 ai-weights
                  (loop [i zoneCount
                         new-world turn-world
                         new-players turn-players]
@@ -569,9 +598,9 @@ this req: " player-place-req))
                                                 (conj acc
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
-                     (let [advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius)
-                           movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world)))
-                           placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world)))]
+                     (let [advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius ai-weights conts-lookup-map)
+                           movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world ai-weights conts-lookup-map)))
+                           placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world ai-weights conts-lookup-map)))]
                        (debug "Movement: " movement)
                        (debug "Placement: " placement)
                        ;;send commands
@@ -629,11 +658,47 @@ this req: " player-place-req))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TURN " turn " ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-       "
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OFFICIAL PLAYERS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-" official-players))
+;;        "
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OFFICIAL PLAYERS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; " official-players "
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OFFICIAL WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; " official-world
+))
+
+      (loop [conts (world/get-continents official-world)
+             next-cont (dec (count conts))]
+
+        (when (<= 0 next-cont )
+          (println (str
+;;                     "next continent:
+;; " (nth conts next-cont)
+"
+size: " (count (nth conts next-cont))
+))
+          (recur conts (dec next-cont))))
+
+
+
+;; (doall (do (println (str "res: " (reduce conj [] (sort (map #(last (last (last %))) @world/shortest-paths))))) ) )
+
+
+
+      ;; (doall (do (println (str "res: "
+      ;;                          ;; (sort-by second
+      ;;                                   (reduce conj [] (sort (map #(last (last (last %))) @world/shortest-paths))
+      ;;                                           ;;
+      ;;                                           ;; (map #( %
+      ;;                                                   ;; [(first %) %]
+      ;;                                                   ;;) ;;(last (last (last %)))
+      ;;                                   ;; @world/shortest-paths)
+      ;;                     ))) ) )
+      ;;)
+      ;; (doall (do
+      ;;          (map #(println (str "[first last]: [" (first %)) " "  (last (last (last %)))  "]") @world/shortest-paths)))
       ;;let form to ease and clarify recur call
       (let [
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

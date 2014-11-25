@@ -443,14 +443,14 @@ unreachable from another node, the distance between the nodes is -1."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ADVISORS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def banker-inf (atom 1))
+(def banker-inf (atom 2))
 (def noise-inf (atom 1))
 (def unit-inf (atom 1))
 (def territory-inf (atom 1))
 (def friendly-terr-constant (atom 5))
-(def enemy-terr-constant (atom (- 1)))
+(def enemy-terr-constant (atom (- 2)))
 (def scalar-constant 1)
-(def friendly-constant (atom 1))
+(def friendly-constant (atom (+ 1)))
 (def enemy-constant (atom (- 1)))
 
 (defprotocol advisor
@@ -464,10 +464,8 @@ unreachable from another node, the distance between the nodes is -1."
   advisor
   (title [adv] "Banker")
   (evaluate [adv node p1]
-;;     (println "ADVISOR (BANKER)
-;; node: " node "
-;; p1: " p1)
-    (- (:income node)))
+    ;; (- (* @banker-inf (/ 1 (- 8 (:income node)))))
+    (* @banker-inf (- (:income node))))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
 
@@ -690,8 +688,7 @@ unreachable from another node, the distance between the nodes is -1."
 (defn det-place
   "Determines where to place units. Does not combine information"
   [p1 world]
-  (let [filtered-world (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  world) ;;world;;
-        ]
+  (let [filtered-world (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  world)] ;;world;;
   ;; (println "Determining placement")
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
@@ -699,7 +696,7 @@ unreachable from another node, the distance between the nodes is -1."
     (if (= 0 pods)
       acc
       ;;recur with point modified map and one less pod
-      (let [global-min (get-global-min filtered-world)]
+      (let [global-min (get-global-min (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  wor))]
         (recur (point-mod wor p1 global-min (get-advisors) standard-radius)
                (dec pods) ;;decrease pods available by 1
                ;;place a pod at global minima

@@ -432,3 +432,89 @@ evaluate change in player strength and adjust advisor influence at the end of ev
 use minimax to determing starting pod placement
 fade confidence in advisor strength adjustments every turn
 forget about continents completely conquered by any non neutral player
+
+
+
+
+
+
+multi-armed advisors
+;;need to have some means of updating advisor weight (influence adv adjust)
+;;need some notion of continents, or segements of graph
+;;need to evaluate players at the end of every turn
+;;need to get changes in player evaluations over time
+;;need exponentialweighting function to
+;;need to map player evaulations (or change of them) to 'payoffs' to the bandit
+;;need to express confidence of bandit results to a range of values
+;;need to express confidence of bandit results as a function of turns elapsed since then
+
+
+
+
+
+
+;;the more strongly a bandit is weighted (as a fraction of total weighting) the more confident i can be that giving it that weight again will result in the same outcome
+
+
+;;bandit weight, turn-num
+
+
+
+
+
+confidence as a function of influence, turn
+c(i, t) =
+
+each previous data point is a node
+
+
+table of sample previous points
+
+turn | inf | conf
+ 1     .2     .2
+ 2     .4     .4
+
+
+(/ .4 (- 3 2))
+(/ .2 (- 3 1))
+
+
+(+
+(* (Math/pow 0.1 2) (- 3 1))
+(* (Math/pow 0.1 2) (- 3 2)))
+
+(+
+(* (Math/pow 10 2) (- 3 1))
+(* (Math/pow 10 2) (- 3 2)))
+
+
+(Math/pow 0.1 2)
+
+
+table data-structure
+[turn inf conf]
+
+
+
+
+
+
+confidence would need to be tracked for each advisor
+gradient descent for confidence
+
+
+monte carlo volume
+
+
+taking confidence to n points in a range and averaging them will tend towards area
+
+
+
+
+;;what need to happen regardless of search code
+divide world into continents,
+have different weights for different continents
+
+
+evaluate different choices of actions
+be able to apply

@@ -69,12 +69,9 @@
 
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
-  [sight p1 world]
+  [sight p1 world ai conts]
   (println "Determining move")
-  ;;create a scalar map of the world and move each unit towards its local minimum
-  (let [scalar-world (advisors/advise world p1 (advisors/get-advisors) sight)]
-    ;; (println "Advised scalar world: " scalar-world)
-    (loop [i 0
+  (loop [i 0
            pods (:pods p1)
            outer-acc []]
     ;; (println (str "i: " i " pods: " pods " acc: " outer-acc))
@@ -90,19 +87,22 @@
                                         ;; acc: " acc))
                                         (if (< 0 pods-remaining)
                                           ;;get shortest path
-                                          (let [next-node (world/get-shortest-path i ;;pods current position
-                                                                                   ;;get node id of local minima
-                                                                                   (:id (world/get-local-min sight
-                                                                                                             i
-                                                                                                             scalar-world)))]
+                                          (let [minima (second
+                                                      ;;get shortest path
+                                                      (world/get-shortest-path i ;;pods current position
+                                                                         ;;get node id of local minima
+                                                                         (:id (world/get-local-min sight
+                                                                                             i
+                                                                                             inner-world))))
+                                              next-node (if (nil? minima) i minima)]
                                             (recur (dec pods-remaining)
-                                                   (advisors/point-mod inner-world p1 (second next-node) (advisors/get-advisors) standard-radius)
-                                                   (conj acc [1 i (second next-node)])))
-                                          acc))))))))
+                                                   (advisors/point-mod inner-world p1 (nth inner-world next-node) (advisors/get-advisors) standard-radius ai conts)
+                                                   (conj acc [1 i next-node])))
+                                          acc)))))))
 
 (defn det-place
   "Determines where to place units. Does not combine information"
-  [p1 world]
+  [p1 world ai conts]
   (println "Determining placement")
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
@@ -111,7 +111,7 @@
       acc
       ;;recur with point modified map and one less pod
       (let [global-min (world/get-global-min wor)]
-        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) standard-radius)
+        (recur (advisors/point-mod wor p1 global-min (advisors/get-advisors) standard-radius ai conts)
                (dec pods) ;;decrease pods available by 1
                ;;place a pod at global minima
                (conj acc [1 (:id global-min)]))))))

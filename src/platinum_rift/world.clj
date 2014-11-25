@@ -38,7 +38,7 @@
      {:id node-id
       :source-value 0 ;;reset at beginning of every turn
       :scalar-value 0 ;;recalculated from nearby source values every turn
-      :owner nil ;;id of player controlling this, neutral '1000' by default
+      :owner -1 ;;id of player controlling this, neutral '1000' by default
       :open-liberties 0 ;;number of touching nodes owners by non-neutral enemy player
       :total-liberties 0 ;;number of bordering nodes, never reset
       :income income
@@ -134,7 +134,47 @@
                        ;;get node ids of nearby nodes
                        (map last (nearby-nodes radius node-id))))))
 
+(defn is-distinct?
+  "Returns true or false depending on if the two nodes have a path between them."
+  [n1 n2]
+  (nil? (get-shortest-path (:id n1) (:id n2))))
 
+(defn get-continents
+  "Returns a vector of vectors which are composed of nodes."
+  [world]
+  (loop [acc-continents []
+         nodes world]
+    (if (empty? nodes)
+      acc-continents ;;done, return continents
+    ;;get the position of the continent that contains this node, if any
+      (let [cont-contains (loop [next-continent (dec (count acc-continents))]
+                            (if (< next-continent 0)
+                              nil
+                              (if (is-distinct? (first (nth acc-continents next-continent))
+                                                (first nodes))
+                                (recur (dec next-continent))
+                                next-continent)))]
+        ;;check if any existing continent is connected to the node
+        (if (or (empty? acc-continents)
+                (nil? cont-contains))
+          ;;if not, create a new continent with this node at the beginning
+          (recur (conj acc-continents [(first nodes)])
+                 (next nodes))
+          ;;if so, add node to that continent
+          (recur (assoc acc-continents
+                   cont-contains
+                   (conj (nth acc-continents cont-contains) (first nodes)))
+                 (next nodes)))))))
+
+
+;;shortest paths representation
+;; [0 ([0] [0 1] [0 1 3] [0 1 2] [0 1 3 8] [0 1 3 4] [0 1 2 7] [0 1 3 8 15] [0 1 3 8 14] [0 1 3 8 9] [0 1 3 4 5] [0 1 2 7 23] [0 1 2 7 13] [0 1 3 8 15 22] [0 1 3 8 15 21] [0 1 3 8 15 16] [0 1 3 8 14 20] [0 1 3 8 9 10] [0 1 3 4 5 6] [0 1 2 7 13 19] [0 1 3 8 15 22 29] [0 1 3 8 15 21 28] [0 1 3 8 15 16 17] [0 1 3 8 14 20 27] [0 1 3 8 9 10 11] [0 1 3 8 15 22 29 38] [0 1 3 8 14 20 27 37] [0 1 3 8 9 10 11 12] [0 1 3 8 14 20 27 37 43] [0 1 3 8 9 10 11 12 18] [0 1 3 8 14 20 27 37 43 46] [0 1 3 8 9 10 11 12 18 24] [0 1 3 8 14 20 27 37 43 46 49] [0 1 3 8 14 20 27 37 43 46 48] [0 1 3 8 14 20 27 37 43 46 47] [0 1 3 8 9 10 11 12 18 24 30] [0 1 3 8 9 10 11 12 18 24 25] [0 1 3 8 9 10 11 12 18 24 30 39] [0 1 3 8 9 10 11 12 18 24 30 31] [0 1 3 8 9 10 11 12 18 24 25 26] [0 1 3 8 9 10 11 12 18 24 30 39 44] [0 1 3 8 9 10 11 12 18 24 30 39 40] [0 1 3 8 9 10 11 12 18 24 30 31 32] [0 1 3 8 9 10 11 12 18 24 30 39 44 45] [0 1 3 8 9 10 11 12 18 24 30 39 40 41] [0 1 3 8 9 10 11 12 18 24 30 31 32 33] [0 1 3 8 9 10 11 12 18 24 30 39 40 41 42] [0 1 3 8 9 10 11 12 18 24 30 31 32 33 34] [0 1 3 8 9 10 11 12 18 24 30 31 32 33 34 35] [0 1 3 8 9 10 11 12 18 24 30 31 32 33 34 35 36])]
+
+;; (let [acc-continents [[{:id 0} {:id 1} {:id 2}] [{:id 3}] [{:id 4} {:id 5}] [{:id 6} {:id 7}] [{:id 8} {:id 9}]]
+;;       cont-contains 3
+;;       nodes [{:id 10}]]
+;; (assoc acc-continents cont-contains (conj (nth acc-continents cont-contains) (first nodes)))
+;; )
 (def edge-vector
   [[0 1]
 
