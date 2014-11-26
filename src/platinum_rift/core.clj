@@ -510,8 +510,11 @@ this req: " player-place-req))
                                                   (assoc-in n-world [zone1 :total-liberties] (inc (:total-liberties (nth n-world zone1))))
                                                   [zone2 :total-liberties] (inc (:total-liberties (nth n-world zone2))))]))
                                        [g-world n-world]))
+
+          ;;determine shortest paths between nodes
+          short-paths (world/find-short-paths graph-world zoneCount)
           ;;determine how the world is divided into unique areas
-          conts (world/get-continents node-world)
+          conts (world/get-continents node-world short-paths)
           ;;create a map of zone-id : continent-number
           conts-lookup-map (loop [next-cont (dec (count conts))
                                   acc {}]
@@ -525,12 +528,8 @@ this req: " player-place-req))
                                     inner-acc
                                     (recur (next nodes)
                                            (assoc inner-acc (:id (first nodes)) next-cont)))))))]
-      ;; (debug "got here1")
-      ;; (when debug
-      ;;   (println "playerCount: " playerCount)
-      ;;   (println "myId: " myId)
-      ;;   (println "zoneCount: " zoneCount)
-      ;;   (println "linkCount: " linkCount))
+      (debug (str  "conts:
+" conts-lookup-map))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -541,22 +540,6 @@ this req: " player-place-req))
                ai-weights [[1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]]]
                turn-world node-world
                turn-players (let [platinum (read)] (assoc-in players [myId :platinum] platinum))]
-;;           (debug "TURN: " turn " MYID: " myId "
-;; turn-world: " turn-world "
-;; turn-players: " turn-players)
-
-          ;; (debug "got here 2")
-
-
-;; (def banker-inf (atom 1))
-;; (def noise-inf (atom 1))
-;; (def unit-inf (atom 1))
-;; (def scalar-constant 1)
-;; (def friendly-constant (atom 1))
-;; (def enemy-constant (atom 1))
-
-
-
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           ;;verify AI view of world matches actual world
@@ -564,7 +547,6 @@ this req: " player-place-req))
           ;;              (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) world))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-          ;; (debug "got here 3")
 
           ;;basic turn structure
           (recur (inc turn)
@@ -580,11 +562,6 @@ this req: " player-place-req))
                            podsP1 (read) ;; podsP1: player 1's PODs on this zone
                            podsP2 (read) ;; podsP2: player 2's PODs on this zone (always 0 for a two player game)
                            podsP3 (read)] ;; podsP3: player 3's PODs on this zone (always 0 for a two or three player game)
-                       ;; (println "zId " zId)
-                       ;; (println "PodsP0: " podsP0)
-                       ;; (println (str "PodsP1: " (or podsP1 "its nil")))
-                       ;; (println "PodsP2: " podsP2)
-                       ;; (println "PodsP3: " podsP3)
                        (recur (dec i)
                               (assoc new-world zId
                                      (assoc (assoc (new-world zId) :owner ownerId) :pods [podsP0 podsP1 podsP2 podsP3]))
@@ -604,16 +581,6 @@ this req: " player-place-req))
                        (debug "Movement: " movement)
                        (debug "Placement: " placement)
                        ;;send commands
-                       (debug (str "movement result: " (println movement)))
-                       (debug (str "placement result: " (println placement)))
-                       ;;determine where to place units
-                       ;; (when debug
-                       ;;   (println "TURN: " turn)
-                       ;;   (println "Movement: " movement)
-                       ;;   (println "Placement: " placement)
-                       ;;   (println "Player1 eval: " (player/evaluate (first players) turn))
-                       ;;   (println "Player2 eval: " (player/evaluate (second players) turn)))
-                       ;; (debug "next turns world: " new-world)
                        new-world)))
                  (assoc-in turn-players [myId :platinum] (read)))))))) ;;next turns platinum
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -669,7 +636,7 @@ this req: " player-place-req))
 ;; " official-world
 ))
 
-      (loop [conts (world/get-continents official-world)
+      (loop [conts (world/get-continents official-world @world/shortest-paths)
              next-cont (dec (count conts))]
 
         (when (<= 0 next-cont )

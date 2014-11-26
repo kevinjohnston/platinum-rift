@@ -100,13 +100,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn find-short-paths
-  [graph]
+  ([graph] (find-short-paths graph num-nodes))
+  ([graph num-nodes]
   (loop [node num-nodes
          acc {}]
     (if (< node 0)
       acc
       (recur (dec node)
-             (assoc acc node (sort-by count (graph/breadth-first-traversal-with-path graph node)))))))
+             (assoc acc node (sort-by count (graph/breadth-first-traversal-with-path graph node))))))))
 
 (defn nearby-nodes
   "Returns all paths with distance <= radius from given origin-node."
@@ -115,8 +116,8 @@
 
 (defn get-shortest-path
   "Returns vector of nodes for shortest path between node1 and node2"
-  [p1 p2]
-  (first (filter #(= (last %) p2) (@shortest-paths p1))))
+  ([p1 p2] (get-shortest-path p1 p2 @shortest-paths))
+  ([p1 p2 shortest-paths] (first (filter #(= (last %) p2) (shortest-paths p1)))))
 
 
 (defn get-global-min
@@ -136,12 +137,12 @@
 
 (defn is-distinct?
   "Returns true or false depending on if the two nodes have a path between them."
-  [n1 n2]
+  [n1 n2 shortest-paths]
   (nil? (get-shortest-path (:id n1) (:id n2))))
 
 (defn get-continents
   "Returns a vector of vectors which are composed of nodes."
-  [world]
+  [world shortest-paths]
   (loop [acc-continents []
          nodes world]
     (if (empty? nodes)
@@ -151,7 +152,8 @@
                             (if (< next-continent 0)
                               nil
                               (if (is-distinct? (first (nth acc-continents next-continent))
-                                                (first nodes))
+                                                (first nodes)
+                                                shortest-paths)
                                 (recur (dec next-continent))
                                 next-continent)))]
         ;;check if any existing continent is connected to the node

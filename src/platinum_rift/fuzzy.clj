@@ -141,6 +141,88 @@
 
 
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY INPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(deftype ratio-fe []
+  fuzz
+  (name [fuzi] "Ratio of Friendly to Enemy pods")
+  (my-key [fuzi] :ratio-fep)
+  (fuzz-it [fuzi num]
+    (cond
+     (< num 1) {:vlo 1 nil [1]}
+     (< num 1) :low
+     (< num 1) :med
+     (< num 1) :high
+     (< num 1) :vhi
+     (< num 1) :max))
+  (kv-pair [fuzi num]
+    [(my-key fuzi) (fuzz-it fuzi num)]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY OUTPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(deftype agg []
+  fuzz-out
+  (fo-key [fuzo] :agg)
+  (ideal-val [fuzo] {:vlo 1
+                     :low 3
+                     :med 7
+                     :high 10
+                     :vhi 15
+                     :max 20})
+  (crisp-it [fuzo m]
+    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
+                             [actual ideal] [[] []]]
+                        (if (empty? kv-pairs)
+                          [actual ideal]
+                          (let [act-val (m (first (first kv-pairs)))
+                                ideal-val (second (first kv-pairs))]
+                          (recur (next kv-pairs)
+                                 [(conj actual (if act-val act-val 0))
+                                  (conj ideal ideal-val)]))
+                          ))]
+      (dot (normalize vec) model))))
+
+(deftype panic []
+  fuzz-out
+  (fo-key [fuzo] :panic)
+  (ideal-val [fuzo] {:vlo 0
+                     :low 5
+                     :med 90
+                     :high 150
+                     :vhi 170
+                     :max 200})
+  (crisp-it [fuzo m]
+    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
+                             [actual ideal] [[] []]]
+                        (if (empty? kv-pairs)
+                          [actual ideal]
+                          (let [act-val (m (first (first kv-pairs)))
+                                ideal-val (second (first kv-pairs))]
+                          (recur (next kv-pairs)
+                                 [(conj actual (if act-val act-val 0))
+                                  (conj ideal ideal-val)]))))]
+      (dot (normalize vec) model))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY EXPERT RULES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(deftype my-rule []
+    fuzz-rules
+  (premise [fuzzr] [[:terr :high] [:income :med]])
+  (consequent [fuzzr] [[:agg :med] [:panic :high]])
+  )
+
+(deftype my-other-rule []
+    fuzz-rules
+  (premise [fuzzr] [[:terr :high] [:income :med]])
+  (consequent [fuzzr] [[:agg :med] [:panic :high]])
+  )
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TESTING ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; (assoc
 
 ;; (assoc {} :hi :there)
@@ -405,80 +487,3 @@
 ;;       rule-res {:bye [4 5]}]
 ;;   (assoc ag-map some-key (conj (ag-map some-key) (rule-res some-key))   )
 ;;   )
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY INPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype ratio-fe []
-  fuzz
-  (name [fuzi] "Ratio of Friendly to Enemy pods")
-  (my-key [fuzi] :ratio-fep)
-  (fuzz-it [fuzi num]
-    (cond
-     (< num 1) {:vlo 1 nil [1]}
-     (< num 1) :low
-     (< num 1) :med
-     (< num 1) :high
-     (< num 1) :vhi
-     (< num 1) :max))
-  (kv-pair [fuzi num]
-    [(my-key fuzi) (fuzz-it fuzi num)]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY OUTPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype agg []
-  fuzz-out
-  (fo-key [fuzo] :agg)
-  (ideal-val [fuzo] {:vlo 1
-                     :low 3
-                     :med 7
-                     :high 10
-                     :vhi 15
-                     :max 20})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))
-                          ))]
-      (dot (normalize vec) model))))
-
-(deftype panic []
-  fuzz-out
-  (fo-key [fuzo] :panic)
-  (ideal-val [fuzo] {:vlo 0
-                     :low 5
-                     :med 90
-                     :high 150
-                     :vhi 170
-                     :max 200})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))))]
-      (dot (normalize vec) model))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY EXPERT RULES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(deftype my-rule []
-    fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )
-
-(deftype my-other-rule []
-    fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )

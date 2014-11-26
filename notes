@@ -692,3 +692,11 @@ def protocol for fuzzy-outputs
 
 
 {fuzz-output-key [fuzzy vect]}
+
+
+
+;;priorities
+#add in continent and fuzzy logic to combined.clj and test
+create way of evaluating a continent
+add fuzzy logic rules and tweak numbers
+adjust how placement is done to exclude continents

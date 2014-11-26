@@ -78,7 +78,10 @@
   "Returns the world with source and scalar values modified by advisors."
   [world p1 advisors near-radius ai conts]
   ;; (println "GETTING ADVICE ON WORLD: " world)
-  (let [source-world
+  (println "GETTING ADVICE ON AI " ai)
+  ;; (println "GETTING ADVICE ON CONTS " (sort-by second conts))
+  (let [num-nodes (count world)
+        source-world
         ;;modify all source values
         (loop [wor world
                next-node 0]
@@ -106,8 +109,7 @@
               nearby-source-node-distances (map count nearby-nodes-paths) ;;get distances to those nodes
               nearby-source-node-vals (map (fn [src-node] (:source-value src-node)) (map acc nearby-source-node-ids)) ;;get the source values (from above)
               ;;get the total scalar components by summing contribution from nearby sources
-              scalar-val (reduce + (map src-to-scal nearby-source-node-vals nearby-source-node-distances))
-              ]
+              scalar-val (reduce + (map src-to-scal nearby-source-node-vals nearby-source-node-distances))]
           (recur (assoc-in acc [next-node :scalar-value] scalar-val) ;;return world with scalar-value added in
                  (inc next-node)))))))
 
