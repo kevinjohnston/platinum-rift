@@ -1,7 +1,7 @@
 (ns platinum-rift.player
   (:require [platinum-rift.world :as world]
             [platinum-rift.constants :refer :all]
-            [platinum-rift.mimic :refer :all] ;;refer to won't need to specify namespace just like in the real game
+            [platinum-rift.mimic :refer :all] ;;refer so we won't need to specify namespace just like in the real game
             [platinum-rift.advisors :as advisors]))
 
 
@@ -47,6 +47,106 @@
   [p1 turn]
   ;;todo make this useful
   (+ (:platinum p1) (reduce + (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
+
+
+
+;; (let [world [{:id 0 :stuff 0} {:id 1} {:id 2}]
+;;       conts [[{:id 0 :stuff nil} {:id 2}] [{:id 1}]]
+;;       some-cont (first conts)]
+;;   (loop [nodes some-cont
+;;          acc []]
+;;     (if (empty? nodes)
+;;       acc
+;;       (let [old-node (first nodes)
+;;             new-node (nth world (:id old-node))
+
+;;             ] (recur (next nodes)
+;;                    (conj acc new-node)
+
+;;              ))
+;;       )
+;;     )
+
+;;   )
+
+(defn quant-node
+  "Updates the accumulated stats with information from the node."
+  [node stats pid]
+(println (str "NODE OWNER: " (node :owner)))
+  (if (= (node :owner) pid)
+    ;;node is friendly, update stats
+    (as-> stats %
+        (assoc % :tot-f-terr (inc (% :tot-f-terr)))
+        (assoc % :tot-f-inc (+ (% :tot-f-inc) (node :income)))
+        (assoc % :tot-f-pods (+ (% :tot-f-pods) (nth (node :pods) pid)))
+        (assoc % :tot-f-tlib (+ (% :tot-f-tlib) (node :total-liberties)))
+        (assoc % :tot-f-olib (+ (% :tot-f-olib) (node :open-liberties))))
+    (if (= (node :owner) (- 1))
+      ;;node is neutral, update stats
+      (as-> stats %
+            (assoc % :tot-n-terr (inc (% :tot-n-terr)))
+            (assoc % :tot-n-inc (inc (% :tot-n-inc)))
+            (assoc % :tot-n-pods (+ (% :tot-n-pods) 0)) ;;neutral player can't have pods (nth (node :pods) pid)
+            (assoc % :tot-n-tlib (+ (% :tot-n-tlib) (node :total-liberties)))
+            (assoc % :tot-n-olib (+ (% :tot-n-olib) (node :open-liberties))))
+      ;;node is enenmy, update stats
+      (as-> stats %
+        (assoc % :tot-e-terr (inc (% :tot-e-terr)))
+        (assoc % :tot-e-inc (inc (% :tot-e-inc)))
+        (assoc % :tot-e-pods (+ (% :tot-e-pods) (nth (node :pods) pid)))
+        (assoc % :tot-e-tlib (+ (% :tot-e-tlib) (node :total-liberties)))
+        (assoc % :tot-e-olib (+ (% :tot-e-olib) (node :open-liberties)))))))
+
+(defn quant-continent
+  "Returns a map with quantitative information about a continent."
+  [world cont pid]
+  ;;get the list of nodes in the continent but with the most up-to-date information from world.
+  (let [updated-cont (loop [nodes cont
+                            acc []]
+                       (if (empty? nodes)
+                         acc
+                         (let [old-node (first nodes)
+                               new-node (nth world (:id old-node))]
+                           (recur (next nodes)
+                                  (conj acc new-node)))))]
+    (println (str "WORLD:
+" world))
+    ;;for every node in the continent gather stats to be returned later
+    (loop [nodes updated-cont
+           acc-stats {:tot-f-terr 0 ;;total friendly territory
+                      :tot-e-terr 0 ;;total enemy territory
+                      :tot-n-terr 0 ;;total neutral territory
+
+                      :tot-f-inc 0 ;;total income contained on friendly nodes
+                      :tot-e-inc 0 ;;total income contained on enemy nodes
+                      :tot-n-inc 0 ;;total income contained on neutral nodes
+
+                      :tot-f-pods 0 ;;total friendly pods
+                      :tot-e-pods 0 ;;total neutral pods
+                      :tot-n-pods 0 ;;total enemy pods
+
+                      :tot-f-tlib 0 ;;total liberties on all friendly nodes
+                      :tot-e-tlib 0 ;;total liberties on all enemy nodes
+                      :tot-n-tlib 0 ;;total liberties on all neutral nodes
+
+                      :tot-f-olib 0 ;;total open liberties on all friendly nodes
+                      :tot-e-olib 0 ;;total open liberties on all enemy nodes
+                      :tot-n-olib 0 ;;total open liberties on all neutral nodes
+                      }]
+      (if (empty? nodes)
+        acc-stats
+        (recur (next nodes)
+               (quant-node (first nodes) acc-stats pid))))))
+
+(defn quant-world
+  "Returns a vector of maps, each map contains data on a continent."
+  [world conts pid]
+  (loop [next-cont conts
+         acc []]
+    (if (empty? next-cont)
+      acc
+      (recur (next next-cont) (conj acc (quant-continent world (first next-cont) pid))))))
+
 
 (defn new-player
   "Creates and returns a new player."

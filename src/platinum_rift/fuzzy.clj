@@ -144,80 +144,168 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY INPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype ratio-fe []
-  fuzz
-  (name [fuzi] "Ratio of Friendly to Enemy pods")
-  (my-key [fuzi] :ratio-fep)
-  (fuzz-it [fuzi num]
-    (cond
-     (< num 1) {:vlo 1 nil [1]}
-     (< num 1) :low
-     (< num 1) :med
-     (< num 1) :high
-     (< num 1) :vhi
-     (< num 1) :max))
-  (kv-pair [fuzi num]
-    [(my-key fuzi) (fuzz-it fuzi num)]))
+;; (defprotocol fuzz-in
+;;   "Protocol for turning numbers into low/high logic"
+;;   (fi-key [fuzzi]) ;;keyword for fuzzy variable
+;;   (fuzz-it [fuzzi num]) ;;takes in the input variable and returns a map of [fuzzy-set-type truthiness] values and a [nil fuzzy-set-vector]
+;;   (kv-pair [fuzzi num])) ;;convenience func that returns a vector with the fuzzy keyword and the fuzzy set for an input
+
+;; (deftype ratio-fe []
+;;   fuzz-in
+;;   (name [fuzi] "Ratio of Friendly to Enemy pods")
+;;   (my-key [fuzi] :ratio-fep)
+;;   (fuzz-it [fuzi num]
+;;     (cond
+;;      (< num 1) {:vlo 1 nil [1]}
+;;      (< num 1) :low
+;;      (< num 1) :med
+;;      (< num 1) :high
+;;      (< num 1) :vhi
+;;      (< num 1) :max))
+;;   (kv-pair [fuzi num]
+;;     [(my-key fuzi) (fuzz-it fuzi num)]))
+
+(deftype ratio-fe-terr []
+  fuzz-in
+  (fi-key [fuzzi] :ratio-fe-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 1 num)) 0)
+                              :hi (max (+ 0.5 (- num 1)) 0)})
+    ;; (cond
+    ;;  (< num 0.5) (hash-map (fi-key fuzzi) {:lo (- 1 num)
+    ;;                                      :low num
+    ;;                                      :med 0
+    ;;                                      :high 0
+    ;;                                      :vhi 0
+    ;;                                      :max 0})
+    ;;  (< num 0.7) (hash-map (fi-key fuzzi) {:vlo num
+    ;;                                      :low (- 1 num)
+    ;;                                      :med (- 1 num)
+    ;;                                      :high 0
+    ;;                                      :vhi 0
+    ;;                                      :max 0})
+
+    ;;  )
+    )
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype per-tot-inc []
+  fuzz-in
+  (fi-key [fuzzi] :per-tot-inc)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.3)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype per-tot-terr []
+  fuzz-in
+  (fi-key [fuzzi] :per-tot-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.3)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(defn get-fuzzy-inputs
+  "Returns seq of fuzzy inputs to be used."
+  []
+  [(ratio-fe-terr.) (per-tot-inc.) (per-tot-terr.)])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY OUTPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype agg []
-  fuzz-out
-  (fo-key [fuzo] :agg)
-  (ideal-val [fuzo] {:vlo 1
-                     :low 3
-                     :med 7
-                     :high 10
-                     :vhi 15
-                     :max 20})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))
-                          ))]
-      (dot (normalize vec) model))))
+;; (defprotocol fuzz-out
+;;   "Protocol for fuzzy output variables."
+;;   (fo-key [fuzzo])
+;;   (ideal-val [fuzzo])
+;;   (crisp-it [fuzzo m])) ;;returns a number represented by a fuzzy set, given a map of {:fuzz-type val
 
-(deftype panic []
-  fuzz-out
-  (fo-key [fuzo] :panic)
-  (ideal-val [fuzo] {:vlo 0
-                     :low 5
-                     :med 90
-                     :high 150
-                     :vhi 170
-                     :max 200})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))))]
-      (dot (normalize vec) model))))
 
+(deftype importance []
+  fuzz-out
+  (fo-key [fuzzo] :importance)
+  (ideal-val [fuzzo] {:lo 0
+                      :hi 5})
+  (crisp-it [fuzzo m] (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzzo))
+                                               [actual ideal] [[] []]]
+                                          (if (empty? kv-pairs)
+                                            [actual ideal]
+                                            (let [act-val (m (first (first kv-pairs)))
+                                                  ideal-val (second (first kv-pairs))]
+                                              (recur (next kv-pairs)
+                                                     [(conj actual (if act-val act-val 0))
+                                                      (conj ideal ideal-val)]))
+                                            ))]
+                        (dot (normalize vec) model))))
+
+;; (deftype agg []
+;;   fuzz-out
+;;   (fo-key [fuzo] :agg)
+;;   (ideal-val [fuzo] {:vlo 1
+;;                      :low 3
+;;                      :med 7
+;;                      :high 10
+;;                      :vhi 15
+;;                      :max 20})
+;;   (crisp-it [fuzo m]
+;;     (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
+;;                              [actual ideal] [[] []]]
+;;                         (if (empty? kv-pairs)
+;;                           [actual ideal]
+;;                           (let [act-val (m (first (first kv-pairs)))
+;;                                 ideal-val (second (first kv-pairs))]
+;;                           (recur (next kv-pairs)
+;;                                  [(conj actual (if act-val act-val 0))
+;;                                   (conj ideal ideal-val)]))
+;;                           ))]
+;;       (dot (normalize vec) model))))
+
+;; (deftype panic []
+;;   fuzz-out
+;;   (fo-key [fuzo] :panic)
+;;   (ideal-val [fuzo] {:vlo 0
+;;                      :low 5
+;;                      :med 90
+;;                      :high 150
+;;                      :vhi 170
+;;                      :max 200})
+;;   (crisp-it [fuzo m]
+;;     (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
+;;                              [actual ideal] [[] []]]
+;;                         (if (empty? kv-pairs)
+;;                           [actual ideal]
+;;                           (let [act-val (m (first (first kv-pairs)))
+;;                                 ideal-val (second (first kv-pairs))]
+;;                           (recur (next kv-pairs)
+;;                                  [(conj actual (if act-val act-val 0))
+;;                                   (conj ideal ideal-val)]))))]
+;;       (dot (normalize vec) model))))
+
+(defn get-fuzzy-outputs
+  "Returns seq of fuzzy outputs to be used."
+  []
+  [(importance.)])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY EXPERT RULES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (defprotocol fuzz-rules
+;;   "Protocol for rules to be applied to fuzzy variables."
+;;   (premise [fuzzr]) ;;returns the premise representation of the rule
+;;   (consequent [fuzzr])) ;;returns the consequent representation of the rule
 
-(deftype my-rule []
+
+(deftype cont-priority []
     fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )
+  (premise [fuzzr] [[:per-tot-terr :low] [:per-tot-inc :high] [:ratio-fe-terr :high]])
+  (consequent [fuzzr] [[:importance :high]]))
 
-(deftype my-other-rule []
-    fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )
+;; (deftype my-other-rule []
+;;     fuzz-rules
+;;   (premise [fuzzr] [[:terr :high] [:income :med]])
+;;   (consequent [fuzzr] [[:agg :med] [:panic :high]])
+;;   )
 
+
+(defn get-fuzzy-rules
+  "Returns seq of fuzzy rules to be used."
+  []
+  [(cont-priority.)])
 
 
 

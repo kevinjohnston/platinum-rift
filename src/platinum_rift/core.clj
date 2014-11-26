@@ -528,8 +528,6 @@ this req: " player-place-req))
                                     inner-acc
                                     (recur (next nodes)
                                            (assoc inner-acc (:id (first nodes)) next-cont)))))))]
-      (debug (str  "conts:
-" conts-lookup-map))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -575,11 +573,13 @@ this req: " player-place-req))
                                                 (conj acc
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
-                     (let [advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius ai-weights conts-lookup-map)
+                     (let [quant-cont (player/quant-world new-world conts myId)
+                           advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius ai-weights conts-lookup-map)
                            movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world ai-weights conts-lookup-map)))
                            placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world ai-weights conts-lookup-map)))]
                        (debug "Movement: " movement)
                        (debug "Placement: " placement)
+                       (debug "Quant: " quant-cont)
                        ;;send commands
                        new-world)))
                  (assoc-in turn-players [myId :platinum] (read)))))))) ;;next turns platinum

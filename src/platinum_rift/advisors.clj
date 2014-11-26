@@ -78,7 +78,7 @@
   "Returns the world with source and scalar values modified by advisors."
   [world p1 advisors near-radius ai conts]
   ;; (println "GETTING ADVICE ON WORLD: " world)
-  (println "GETTING ADVICE ON AI " ai)
+  ;; (println "GETTING ADVICE ON AI " ai)
   ;; (println "GETTING ADVICE ON CONTS " (sort-by second conts))
   (let [num-nodes (count world)
         source-world

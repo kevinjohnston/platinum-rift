@@ -700,3 +700,48 @@ def protocol for fuzzy-outputs
 create way of evaluating a continent
 add fuzzy logic rules and tweak numbers
 adjust how placement is done to exclude continents
+
+
+;;how to evaluate the world
+
+
+how to evaluate a map	:very-low	:low	:medium	:high	:very-high	:max
+number of friendly pods
+number of enemy pods
+ratio of friendly to enemy pods	< .2	< 0.5	> .8 && < 1.2	< 1.5	< 2.0	 > 2
+pod density
+total income	< 3	< 10	< 30	< 60	< 90	> 90
+income percent of map total	< 3/120	< 10/120	< ¼	< ½	< ¾	> ¾
+friendly/enemy territory total	< 2/10	< 8/10	< 1.5	< 3	< 1000	> 1000
+friendly/neutral territory total
+friendly territories on continent
+total territories
+continent territories to world territories ratio	< 1/10	< ¼	< 3/8	< ½	< 1	1
+Open-liberties
+turn	< 3	< 10	< 30	< 60	< 100	> 100
+
+
+
+;;vector of maps, each map contains the evaluation for a single continent
+[{
+friendly-pods
+enemy-pods
+ratio-fe-pods
+pod-density?
+total-income
+income-frac
+friendly-terr
+
+ } {}...]
+
+
+ratio
+percent
+total
+
+territory
+income
+
+enemy
+friendly
+neutral

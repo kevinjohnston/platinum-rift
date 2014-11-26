@@ -455,109 +455,83 @@ unreachable from another node, the distance between the nodes is -1."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY INPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (deftype ratio-fe []
-;;   fuzz-in
-;;   (name [fuzzi] "Ratio of Friendly to Enemy pods")
-;;   (fi-key [fuzzi] :ratio-fep)
-;;   (fuzz-it [fuzzi num]
-;;     (cond
-;;      (< num 1) {:vlo 1 nil [1]}
-;;      (< num 1) :low
-;;      (< num 1) :med
-;;      (< num 1) :high
-;;      (< num 1) :vhi
-;;      (< num 1) :max))
-;;   (kv-pair [fuzzi num]
-;;     [(my-key fuzzi) (fuzz-it fuzzi num)]))
+(deftype ratio-fe-terr []
+  fuzz-in
+  (fi-key [fuzzi] :ratio-fe-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 1 num)) 0)
+                              :hi (max (+ 0.5 (- num 1)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype per-tot-inc []
+  fuzz-in
+  (fi-key [fuzzi] :per-tot-inc)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.3)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype per-tot-terr []
+  fuzz-in
+  (fi-key [fuzzi] :per-tot-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.3)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(defn get-fuzzy-inputs
+  "Returns seq of fuzzy inputs to be used."
+  []
+  [(ratio-fe-terr.) (per-tot-inc.) (per-tot-terr.)])
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY OUTPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype agg []
+(deftype importance []
   fuzz-out
-  (fo-key [fuzo] :agg)
-  (ideal-val [fuzo] {:vlo 1
-                     :low 3
-                     :med 7
-                     :high 10
-                     :vhi 15
-                     :max 20})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))
-                          ))]
-      (dot (normalize vec) model))))
+  (fo-key [fuzzo] :importance)
+  (ideal-val [fuzzo] {:lo 0
+                      :hi 5})
+  (crisp-it [fuzzo m] (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzzo))
+                                               [actual ideal] [[] []]]
+                                          (if (empty? kv-pairs)
+                                            [actual ideal]
+                                            (let [act-val (m (first (first kv-pairs)))
+                                                  ideal-val (second (first kv-pairs))]
+                                              (recur (next kv-pairs)
+                                                     [(conj actual (if act-val act-val 0))
+                                                      (conj ideal ideal-val)]))
+                                            ))]
+                        (dot (normalize vec) model))))
 
-(deftype panic []
-  fuzz-out
-  (fo-key [fuzo] :panic)
-  (ideal-val [fuzo] {:vlo 0
-                     :low 5
-                     :med 90
-                     :high 150
-                     :vhi 170
-                     :max 200})
-  (crisp-it [fuzo m]
-    (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzo))
-                             [actual ideal] [[] []]]
-                        (if (empty? kv-pairs)
-                          [actual ideal]
-                          (let [act-val (m (first (first kv-pairs)))
-                                ideal-val (second (first kv-pairs))]
-                          (recur (next kv-pairs)
-                                 [(conj actual (if act-val act-val 0))
-                                  (conj ideal ideal-val)]))))]
-      (dot (normalize vec) model))))
+(defn get-fuzzy-outputs
+  "Returns seq of fuzzy outputs to be used."
+  []
+  [(importance.)])
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY EXPERT RULES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftype my-rule []
+(deftype cont-priority []
     fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )
+  (premise [fuzzr] [[:per-tot-terr :low] [:per-tot-inc :high] [:ratio-fe-terr :high]])
+  (consequent [fuzzr] [[:importance :high]]))
 
-(deftype my-other-rule []
-    fuzz-rules
-  (premise [fuzzr] [[:terr :high] [:income :med]])
-  (consequent [fuzzr] [[:agg :med] [:panic :high]])
-  )
-
-
-
+(defn get-fuzzy-rules
+  "Returns seq of fuzzy rules to be used."
+  []
+  [(cont-priority.)])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; (def world (atom []))
-;; (def graph-world (atom (make-graph #{} {})))
 (def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
 
 (declare reset-world)
 
-;; (declare edge-vector)
 (declare get-shortest-path)
 (declare find-short-paths)
 (declare nearby-nodes)
-
-;; (defn setup-graph-world
-;;   "Creates the defacto graph world, hopefully this is identical to the true game world (though logic shouldn't depend on it)."
-;;   []
-;;   (swap! graph-world #(when % (make-graph #{} {})))
-;;   (swap! graph-world #(when %
-;;                         (loop [graph (reduce add-nodes (make-graph #{} {}) (range num-nodes)) ;;add all nodes
-;;                                edges edge-vector]
-;;                           (if (empty? edges)
-;;                             graph
-;;                             (recur (add-edge graph (first (first edges)) (second (first edges))) ;;add all links
-;;                                    (next edges)))))))
 
 
 (defn new-node
@@ -583,18 +557,6 @@ unreachable from another node, the distance between the nodes is -1."
              (conj acc (new-node node-id))) ;;add another node
       acc))))
 
-;; (defn add-income
-;;   "Takes in the world (a vector of maps, one for each node)."
-;;   [world]
-;;   (loop [res-remain max-res
-;;          next-node (rand-int num-nodes)
-;;          acc world]
-;;     (if (= 0 res-remain)
-;;       acc;;return the updated world
-;;       (if (>= (:income (world next-node)) max-inc)
-;;         (recur res-remain (rand-int num-nodes) acc)
-;;         (recur (dec res-remain) (rand-int num-nodes) (assoc-in acc [next-node :income] (inc (:income (acc next-node)))))))))
-
 (defn node-liberties
   [node world]
   "Returns the number of liberties, bordering nodes not owned by the same player, of a given node."
@@ -606,25 +568,6 @@ unreachable from another node, the distance between the nodes is -1."
              (map #((nth world %) :owner)
                   ;;get all bordering node ids
                   (map last (next (nearby-nodes 2 0))))))))
-
-;; (defn reset-world
-;;   ""
-;;   []
-;;   (swap! world (fn [_] (add-income (blank-world))))
-;;   (setup-graph-world)
-;;   ;;find all shortest paths
-;;   (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-;;   world)
-
-;; (defn new-world
-;;   ""
-;;   ([] (new-world 154))
-;;   ([num-nodes]
-;;      (add-income (blank-world num-nodes))
-;;      (setup-graph-world)
-;;      ;;find all shortest paths
-;;      (swap! shortest-paths (fn [_] (find-short-paths @graph-world)))
-;;      (add-income (blank-world))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -728,9 +671,6 @@ unreachable from another node, the distance between the nodes is -1."
   advisor
   (title [adv] "Noise")
   (evaluate [adv node p1]
-;;     (println "ADVISOR (BANKER)
-;; node: " node "
-;; p1: " p1)
     (rand-int 3))
   (influence [adv] @noise-inf)
   (influence [adv adjust] (swap! noise-inf #(+ % adjust))))
@@ -739,18 +679,9 @@ unreachable from another node, the distance between the nodes is -1."
   advisor
   (title [adv] "Unit")
   (evaluate [adv node p1]
-;;     (println (str  "ADVISOR (UNIT)
-;; node: " node "
-;; p1: " p1))
-;;     (println (str "friendly constant: " @friendly-constant "
-;; enemy constant: " @enemy-constant))
     (loop [player-pods (:pods node)
            p-id 0
            acc 0]
-      ;; (println (str "player-pods: " player-pods))
-      ;; (println "p-id: " p-id)
-      ;; (println "acc: " acc)
-      ;; (println "enemy-const: " @enemy-constant)
       (if (and (< p-id (count (:pods node))) ;;ensure we don't process players not in the game
                (:pods node)) ;;ensure pods actually exist
         (recur
@@ -898,6 +829,93 @@ unreachable from another node, the distance between the nodes is -1."
   ;;todo make this useful
   (+ (:platinum p1) (reduce + (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
 
+(defn quant-node
+  "Updates the accumulated stats with information from the node."
+  [node stats pid]
+
+ ;; (println (str "NODE OWNER: " (node :owner)))
+
+  (if (= (node :owner) pid)
+    ;;node is friendly, update stats
+    (as-> stats %
+        (assoc % :tot-f-terr (inc (% :tot-f-terr)))
+        (assoc % :tot-f-inc (+ (% :tot-f-inc) (node :income)))
+        (assoc % :tot-f-pods (+ (% :tot-f-pods) (nth (node :pods) pid)))
+        (assoc % :tot-f-tlib (+ (% :tot-f-tlib) (node :total-liberties)))
+        (assoc % :tot-f-olib (+ (% :tot-f-olib) (node :open-liberties))))
+    (if (= (node :owner) (- 1))
+      ;;node is neutral, update stats
+      (as-> stats %
+            (assoc % :tot-n-terr (inc (% :tot-n-terr)))
+            (assoc % :tot-n-inc (inc (% :tot-n-inc)))
+            (assoc % :tot-n-pods (+ (% :tot-n-pods) 0)) ;;neutral player can't have pods (nth (node :pods) pid)
+            (assoc % :tot-n-tlib (+ (% :tot-n-tlib) (node :total-liberties)))
+            (assoc % :tot-n-olib (+ (% :tot-n-olib) (node :open-liberties))))
+      ;;node is enenmy, update stats
+      (as-> stats %
+        (assoc % :tot-e-terr (inc (% :tot-e-terr)))
+        (assoc % :tot-e-inc (inc (% :tot-e-inc)))
+        (assoc % :tot-e-pods (+ (% :tot-e-pods) (nth (node :pods) pid)))
+        (assoc % :tot-e-tlib (+ (% :tot-e-tlib) (node :total-liberties)))
+        (assoc % :tot-e-olib (+ (% :tot-e-olib) (node :open-liberties)))))))
+
+(defn quant-continent
+  "Returns a map with quantitative information about a continent."
+  [world cont pid]
+;;   (if (> 1 (rand-int 20))
+;;     (println (str "WORLD:
+;; " world))
+;;     )
+  ;;get the list of nodes in the continent but with the most up-to-date information from world.
+  (let [updated-cont (loop [nodes cont
+                            acc []]
+                       (if (empty? nodes)
+                         acc
+                         (let [old-node (first nodes)
+                               new-node (nth world (:id old-node))]
+                           (recur (next nodes)
+                                  (conj acc new-node)))))]
+;;     (println (str "WORLD:
+;; " world))
+    ;;for every node in the continent gather stats to be returned later
+    (loop [nodes updated-cont
+           acc-stats {:tot-f-terr 0 ;;total friendly territory
+                      :tot-e-terr 0 ;;total enemy territory
+                      :tot-n-terr 0 ;;total neutral territory
+
+                      :tot-f-inc 0 ;;total income contained on friendly nodes
+                      :tot-e-inc 0 ;;total income contained on enemy nodes
+                      :tot-n-inc 0 ;;total income contained on neutral nodes
+
+                      :tot-f-pods 0 ;;total friendly pods
+                      :tot-e-pods 0 ;;total neutral pods
+                      :tot-n-pods 0 ;;total enemy pods
+
+                      :tot-f-tlib 0 ;;total liberties on all friendly nodes
+                      :tot-e-tlib 0 ;;total liberties on all enemy nodes
+                      :tot-n-tlib 0 ;;total liberties on all neutral nodes
+
+                      :tot-f-olib 0 ;;total open liberties on all friendly nodes
+                      :tot-e-olib 0 ;;total open liberties on all enemy nodes
+                      :tot-n-olib 0 ;;total open liberties on all neutral nodes
+                      }]
+      (if (empty? nodes)
+        acc-stats
+        (recur (next nodes)
+               (quant-node (first nodes) acc-stats pid))))))
+
+(defn quant-world
+  "Returns a vector of maps, each map contains data on a continent."
+  [world conts pid]
+  (loop [next-cont conts
+         acc []]
+    (if (empty? next-cont)
+      acc
+      (recur (next next-cont) (conj acc (quant-continent world (first next-cont) pid))))))
+
+
+
+
 (defn new-player
   "Creates and returns a new player."
   [id num-nodes starting-plat]
@@ -914,6 +932,9 @@ unreachable from another node, the distance between the nodes is -1."
                 (recur (inc pods)
                        (conj acc 0))
                 acc))})
+
+
+
 
 
 (defn det-move
@@ -1122,7 +1143,8 @@ unreachable from another node, the distance between the nodes is -1."
                                                 (conj acc
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
-                     (let [advised-world (advise new-world (nth turn-players myId) (get-advisors) sight-radius ai-weights conts-lookup-map)
+                     (let [quant-cont (quant-world new-world conts myId)
+                           advised-world (advise new-world (nth turn-players myId) (get-advisors) sight-radius ai-weights conts-lookup-map)
                            movement (.trim (gen-move-message (det-move sight-radius (nth new-players myId) advised-world)))
                            placement (.trim (gen-place-message (det-place (nth new-players myId) advised-world)))]
                        ;;send commands
