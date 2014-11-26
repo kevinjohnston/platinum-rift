@@ -159,6 +159,119 @@
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."
   [x p1 p2 world])
 
+(defn ret-adv-map
+  [pod terr income]
+  {:pod-str pod
+   :territory terr
+   :income income})
+
+
+
+
+;; (normalize [0 0.0])
+
+;;  (dot [0.5 1 1] [1 0 1])
+
+;; (map (fn [%1 %2] [%1 %2]) [1 2 3] [2 2 2])
+
+;; (defn high-low-case
+
+;;   )
+
+;; ;;case macros
+;; (defn case-dispatch
+;;   [type num]
+;;   (case type
+;;     :ratio-fe (num)))
+
+
+;; (defn eval-continent
+;;   "Takes in a continent (a vector of zones), and a player id, then returns an evaluation map for the given player."
+;;   [cont p-id]
+;;   (let [total-pods (reduce #(reduce + (:pods %)) cont)
+;;         enemy-pods (reduce #(- (reduce + (:pods %)) ((:pods %) p-id)) cont)
+;;         friendly-pods (- total-pods enemy-pods)]
+
+;;   (reduce #(assoc %1 (first %2) (second %2)) {}
+
+;; 1 ;; number of friendly pods
+;; 1 ;; number of enemy pods
+;; (kv-pair (ratio-fe. )
+;;          ;; ratio of friendly to enemy pods	< .2	< 0.5	> .8 && < 1.2	< 1.5	< 2.0	 > 2
+;;          (if (> enemy-pods 0) (friend))
+;;          )
+
+;; 1 ;; pod density
+;; 1 ;; total income	< 3	< 10	< 30	< 60	< 90	> 90
+;; 1 ;; income percent of map total	< 3/120	< 10/120	< ¼	< ½	< ¾	> ¾
+;; 1 ;; friendly/enemy territory total	< 2/10	< 8/10	< 1.5	< 3	< 1000	> 1000
+;; 1 ;; friendly/neutral territory total
+;; 1 ;; friendly territories on continent
+;; 1 ;; total territories
+;; 1 ;; continent territories to world territories ratio	< 1/10	< ¼	< 3/8	< ½	< 1	1
+;; 1 ;; Open-liberties
+;; 1 ;; turn	< 3	< 10	< 30	< 60	< 100	> 100
+
+;;    )
+;;   ))
+
+
+;; (reduce #(assoc %1 (first %2) (second %2))  {} [[ :some-key :some-val] [ :some-key2 :things]])
+
+
+;; how to evaluate a map	:very-low	:low	:medium	:high	:very-high	:max
+;; number of friendly pods
+;; number of enemy pods
+;; ratio of friendly to enemy pods	< .2	< 0.5	> .8 && < 1.2	< 1.5	< 2.0	 > 2
+;; pod density
+;; total income	< 3	< 10	< 30	< 60	< 90	> 90
+;; income percent of map total	< 3/120	< 10/120	< ¼	< ½	< ¾	> ¾
+;; friendly/enemy territory total	< 2/10	< 8/10	< 1.5	< 3	< 1000	> 1000
+;; friendly/neutral territory total
+;; friendly territories on continent
+;; total territories
+;; continent territories to world territories ratio	< 1/10	< ¼	< 3/8	< ½	< 1	1
+;; Open-liberties
+;; turn	< 3	< 10	< 30	< 60	< 100	> 100
+
+
+
+
+
+
+;; (def adv-map
+;;   {
+;; (ret-adv-map :high :low :high)
+;; [1 2 0.3]
+;; })
+
+;; (adv-map {:pod-str :high :territory :low :income :high :things :stuff})
+
+
+
+
+;; ;;continent state
+;; {:pod-str :high
+;;  :territory :low
+;;  :income :high}
+
+;; :high :low
+
+
+;; (if (= {:pod-str :high
+;;     :territory :low
+;;     :income :high}
+;;    {:pod-str :high
+;;     :territory :low
+;;     :income :high}
+;;        )
+;;   [1 1 1])
+
+
+
+
+
+
 
 
 ;;how to predict opponents next move

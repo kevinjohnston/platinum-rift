@@ -518,3 +518,177 @@ have different weights for different continents
 
 evaluate different choices of actions
 be able to apply
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+player state for a continent is evaulated and fit to a map format
+e.g. {:pod-str :high
+      :territory :low
+      :income :high}
+
+this is looked up in a map of the form
+k: { eval map as above }
+v: [ vector of advisor strength vectors }
+
+and the resulting advisor strenght vector, for that map is returned
+
+
+
+how are continents evaluated
+
+what is contained in returned vector
+[ [0]
+  [1]
+  [1 2]
+  [sight scale-radius] ]
+
+
+
+
+;;parts to dispatch
+determine raw number
+call dispatch with type and number
+
+
+instead of returning :low, :med, :high return a vector of [lowness, medness, highness]
+
+
+
+ultimately an evaluation will be a map of k=property v=fuzzy-set pairs
+{ --contains information for each property
+:territory [0.2 0.8 0 0 0 0] --inner vectors are a fuzzy set of :vlo -:max classifications for the given property
+[]
+[]
+}
+
+expert rules are defined in terms of fuzzy sets
+i.e. (if :territory is :low and :income is :high ) return adv vector [1 2 0.3 17 6]
+then :be-aggressive
+
+
+how to turn strategies into adv vectors
+
+the evaluation will be run through each expert rule and given a truth value
+{
+ ;;key=expert rule ;;true value
+   :expert-rule1      0.7
+}
+
+the number rules with total truth values above .9 will be averaged (weighted by truth) and divided by (Math/abs (1 - truth-total)) to come up with adv vector
+
+
+[1 2 17 0.2 5]  .5
+[1 2 4 0.2 5]  .3
+[6 3 17 0.2 5]  .4
+
+:be-aggressive .5
+:be-passive .3
+
+
+membership functions
+(fn [val] (cond (< val 0.3) [1 0 0]
+                (< val 0.5) [(1 - val) val 0]
+                (< val 0.7) [0 (1 - val) val]
+                (<= val 1.0) [0 0 1]))
+.2-> [1 0 0]
+.3-> [.7 .3 0]
+.4-> [.6 .4 0]
+.5-> [0 .5 .5]
+.6-> [0 .4 .6]
+.7-> [0 .3 .7]
+.8-> [0 0 1]
+
+
+
+inferences:
+
+rules:
+premise -> (if :terr is :low)  consequent -> (then :aggressiveness is high)
+
+
+steps
+fuzzification: apply membership function to input variable, to get fuzzy set for that input variable
+inference: determine truth value for premise of each rule, apply this to the consequent of each rule
+composition: fuzzy sets of output variables are combined together/selected
+defuzzification(optional): turns a fuzzy set back into a 'crisp' value
+
+
+
+
+**two inference methods
+*min:
+*product: output is scaled by truthiness of input, so if aggressive corresponds to [0 0 truthiness of premise]
+
+
+**two conposition methods:
+*max: uses the most true consequent relevant to the output variable, for each member of the outputs fuzzy set
+*sum: all consequents have their fuzzy subsets added together, this can result in values greater than one and requires defuzz
+
+**many defuzzification methods
+*centroid: center of gravity of fuzzy set is computed, that value
+*maximum: most true fuzzy category of output variable is used
+
+
+so given :terr value of .4
+after fuzzification results in fuzzy set of
+low med high
+[.6 .4 0]
+for :terr
+
+after inference (product)
+rule1 would give fuzzy set
+[0 0 .6]
+for :aggressiveness
+
+after composition (sum) gives
+[0 0 .6]
+for :aggressiveness
+
+after defuzzification (maximum)
+would use .6 for aggressiveness
+
+defining defuzzification function
+(use scaled truth of each category as multiplier of representative value)
+[0 0 .6] * [1 5 10] =
+
+normalize truth vector, take dot product with defuz vector
+
+
+
+membership functions    (used to map input values to fuzzy sets --- the fuzzification process)
+rules                   (used to map input fuzzy sets to output fuzzy sets)
+defuz-rules             (used to map composed fuzzy set to 'crisp' value)
+inference function --- single func that sends certain fuzzy input sets
+to certain rules and keeps map of results
+composition function   --- single func that sums output fuzzy sets
+defuzzification        --- single func that maps composed fuzzy sets to their defuz-rule and returns the result
+
+
+rule = [premise consequen]
+
+:premise
+({:var :low
+:var2 :med
+:var3 :low}
+
+:consequent
+{:out-var1 :low
+:out-var2 :max}
+
+
+cond (some value of input var) [fuzzy set]
+
+
+
+def-protocol for fuzzy-inputs
+
+def-protocol for rules
+
+def protocol for fuzzy-outputs
+
+(defuz-it
+[0.2 0.8]
+
+
+
+{fuzz-output-key [fuzzy vect]}
