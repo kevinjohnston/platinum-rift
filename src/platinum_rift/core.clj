@@ -527,7 +527,9 @@ this req: " player-place-req))
                                   (if (empty? nodes)
                                     inner-acc
                                     (recur (next nodes)
-                                           (assoc inner-acc (:id (first nodes)) next-cont)))))))]
+                                           (assoc inner-acc (:id (first nodes)) next-cont)))))))
+          world-stats {:tot-inc 120
+                       :tot-terr zoneCount}]
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -535,7 +537,11 @@ this req: " player-place-req))
         (loop [turn 1
                ;;a vector of vectors of numbers, the inner vector of numbers contains ai weights,
                ;;the outer vector contains that set of ai weights for a each continent
-               ai-weights [[1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]] [1 1 [1 1]]]
+               ;; ai-weights [[[1] [1 1] [1 1] [1 1] [1 1]]
+               ;;             [[1] [1 1] [1 1] [1 1] [1 1]]
+               ;;             [[1] [1 1] [1 1] [1 1] [1 1]]
+               ;;             [[1] [1 1] [1 1] [1 1] [1 1]]
+               ;;             [[1] [1 1] [1 1] [1 1] [1 1]]]
                turn-world node-world
                turn-players (let [platinum (read)] (assoc-in players [myId :platinum] platinum))]
 
@@ -548,7 +554,7 @@ this req: " player-place-req))
 
           ;;basic turn structure
           (recur (inc turn)
-                 ai-weights
+                 ;; ai-weights
                  (loop [i zoneCount
                         new-world turn-world
                         new-players turn-players]
@@ -574,6 +580,7 @@ this req: " player-place-req))
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
                      (let [quant-cont (player/quant-world new-world conts myId)
+                           ai-weights (player/update-ai-weights quant-cont world-stats) ;;(or   ai-weights)
                            advised-world (advisors/advise new-world (nth turn-players myId) (advisors/get-advisors) sight-radius ai-weights conts-lookup-map)
                            movement (.trim (player/gen-move-message (player/det-move sight-radius (nth new-players myId) advised-world ai-weights conts-lookup-map)))
                            placement (.trim (player/gen-place-message (player/det-place (nth new-players myId) advised-world ai-weights conts-lookup-map)))]

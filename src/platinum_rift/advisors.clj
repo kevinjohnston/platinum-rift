@@ -22,40 +22,20 @@
   advisor
   (title [adv] "Banker")
   (evaluate [adv node p1 inf]
-;;     (println "ADVISOR (BANKER)
-;; node: " node "
-;; p1: " p1)
-    (* inf (- (:income node))))
+    (println "BANKER INF: " (nth inf 0))
+    (* (nth inf 0) (- (:income node))))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
-
-(deftype noise []
-  advisor
-  (title [adv] "Noise")
-  (evaluate [adv node p1 inf]
-;;     (println "ADVISOR (BANKER)
-;; node: " node "
-;; p1: " p1)
-    (* inf (rand-int 3)))
-  (influence [adv] @noise-inf)
-  (influence [adv adjust] (swap! noise-inf #(+ % adjust))))
 
 (deftype unit []
   advisor
   (title [adv] "Unit")
   (evaluate [adv node p1 inf]
-;;     (println (str  "ADVISOR (UNIT)
-;; node: " node "
-;; p1: " p1))
-;;     (println (str "friendly constant: " @friendly-constant "
-;; enemy constant: " @enemy-constant))
+    (println "FRIENDLY UNIT INF: " (nth inf 0))
+    (println "ENEMY UNIT INF: " (nth inf 1))
     (loop [player-pods (:pods node)
            p-id 0
            acc 0]
-      ;; (println (str "player-pods: " player-pods))
-      ;; (println "p-id: " p-id)
-      ;; (println "acc: " acc)
-      ;; (println "enemy-const: " @enemy-constant)
       (if (and (< p-id (count (:pods node))) ;;ensure we don't process players not in the game
                (:pods node)) ;;ensure pods actually exist
         (recur
@@ -65,6 +45,18 @@
            (+ acc (* ((:pods node) p-id) (first inf)))
            (+ acc (* ((:pods node) p-id) (second inf)))))
         acc)))
+  (influence [adv] @unit-inf)
+  (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
+
+(deftype territory []
+  advisor
+  (title [adv] "Territory")
+  (evaluate [adv node p1 inf]
+    (println "FRIENDLY TERR INF: " (nth inf 0))
+    (println "ENEMY TERR INF: " (nth inf 1))
+    (if (= (:id p1) (:owner node))
+      (nth inf 0)
+      (nth inf 1)))
   (influence [adv] @unit-inf)
   (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
 
@@ -154,8 +146,7 @@
 (defn get-advisors
   "Returns a list of all advisors"
   []
-  ;;(list (banker.) )
-  (list (banker.) (noise.) (unit.)))
+  (list (banker.) (unit.) (territory.)))
 
 (defn move-mod
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."

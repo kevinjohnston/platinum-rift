@@ -745,3 +745,28 @@ income
 enemy
 friendly
 neutral
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;expert rules
+;;try to let opponents kill each other if possible
+in 3 or 4 player games avoid, enemy units and territory
+;;large, rich continents are a prime target
+if a cont has a lot of resources weigh the whole continent higher
+#;;avoid taking small continents
+#if a cont has few territories way it less
+#;;don't lose grasp of asia, or other large continents
+#if a cont has many territories and we have almost no units there weigh it strongly
+;;go where other players aren't
+if a cont has few enemies (total) weigh it more strongly
+;;once a cont is almost won finish off units quickly
+if a cont has few enemy territories left and many friendly territories weigh enemy territory strongly and weigh units strongly
+;;avoid placeing units on already conquered territories
+if most territories on a continent are friendly weigh friendly territories very negatively
+;;punish spread out players
+if enemy open-liberties is high, weigh enemy territory more strongly

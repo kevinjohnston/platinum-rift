@@ -300,18 +300,10 @@ unreachable from another node, the distance between the nodes is -1."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def pod-cost 20)
-;; (def starting-plat 200)
-;; (def debug true)
-;; (def starting-plat 200)
-;; (def num-nodes 154)
 (def standard-radius 3)
-;; (def max-res 200)
-;; (def max-inc 6)
-;; (def max-fight-loop 3)
 (def sight-radius 3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defprotocol fuzz-in
   "Protocol for turning numbers into low/high logic"
   (fi-key [fuzzi]) ;;keyword for fuzzy variable
@@ -344,7 +336,6 @@ unreachable from another node, the distance between the nodes is -1."
                  acc))))))
 
 (defn extract
-  ""
   [m v]
   (loop [k v
          inner m]
@@ -355,7 +346,6 @@ unreachable from another node, the distance between the nodes is -1."
              (inner (first k))))))
 
 (defn extract-all
-  ""
   [m v]
   (loop [next-v v
          acc []]
@@ -369,11 +359,7 @@ unreachable from another node, the distance between the nodes is -1."
                        inner
                        (recur (next k)
                               (inner (first k))))))))))
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; VECTOR FUNCTIONS FOR FUZZY SETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defn dot
   "Returns dot product of two vectors."
   [v1 v2]
@@ -389,12 +375,10 @@ unreachable from another node, the distance between the nodes is -1."
     (map #(/ % sum) v1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 (defn inference
   "Takes in a map of [fuzzy-input-type fuzzy-set], and a seq of fuzz-rules to evaluate. Returns a map of {:fuzzy-output-type {:fuzz-prop [val1 val2 ...]}}
   Applies fuzzy inputs to rules, and tracks output fuzzy sets by type."
-  [fuzz-map fuzz-rules]
+  [fuzz-rules fuzz-map]
   (loop [rules fuzz-rules
          acc {}]
     (if (empty? rules)
@@ -418,7 +402,6 @@ unreachable from another node, the distance between the nodes is -1."
                        [(nth %2 0) (nth %2 1) ] [(nth %2 2)]))
           acc
           (partition 3 (interleave types props (cycle [val])))))))))
-
 (defn composition
   "Composes inference results"
   [m]
@@ -434,11 +417,9 @@ unreachable from another node, the distance between the nodes is -1."
                  inner-acc
                  (recur (next inner-pair)
                         (assoc-in inner-acc [(first (first pair)) (first (first inner-pair))] (reduce + (second (first inner-pair)))))))))))
-
-
 (defn defuzzification
   ""
-  [m fuzz-out]
+  [fuzz-out m]
 
   (loop [fuzzo fuzz-out
          acc {}]
@@ -446,14 +427,6 @@ unreachable from another node, the distance between the nodes is -1."
       acc
       (recur (next fuzzo)
              (assoc acc (fo-key (first fuzzo)) (crisp-it (first fuzzo) (m (fo-key (first fuzzo)))))))))
-
-
-
-
-
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY INPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftype ratio-fe-terr []
   fuzz-in
@@ -467,32 +440,61 @@ unreachable from another node, the distance between the nodes is -1."
   fuzz-in
   (fi-key [fuzzi] :per-tot-inc)
   (fuzz-it [fuzzi num]
-    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
-                              :hi (max (+ 0.5 (- num 0.3)) 0)}))
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.1 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.2)) 0)}))
   (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
 
 (deftype per-tot-terr []
   fuzz-in
   (fi-key [fuzzi] :per-tot-terr)
   (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.2 num)) 0)
+                              :hi (max (+ 0.5 (- num 0.4)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype tot-e-pods []
+  fuzz-in
+  (fi-key [fuzzi] :tot-e-pods)
+  (fuzz-it [fuzzi num]
     (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 0.3 num)) 0)
                               :hi (max (+ 0.5 (- num 0.3)) 0)}))
   (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
 
+(deftype ratio-fe-pods []
+  fuzz-in
+  (fi-key [fuzzi] :ratio-fe-pods)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 1 num)) 0)
+                              :hi (max (+ 0.5 (- num 1)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype ratio-ne-terr []
+  fuzz-in
+  (fi-key [fuzzi] :ratio-ne-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 1 num)) 0)
+                              :hi (max (+ 0.5 (- num 1)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+(deftype ratio-nf-terr []
+  fuzz-in
+  (fi-key [fuzzi] :ratio-nf-terr)
+  (fuzz-it [fuzzi num]
+    (hash-map (fi-key fuzzi) {:lo (max (+ 0.5 (- 1 num)) 0)
+                              :hi (max (+ 0.5 (- num 1)) 0)}))
+  (kv-pair [fuzzi num] [(fi-key fuzzi) (fuzz-it fuzzi num)]))
+
+
 (defn get-fuzzy-inputs
   "Returns seq of fuzzy inputs to be used."
   []
-  [(ratio-fe-terr.) (per-tot-inc.) (per-tot-terr.)])
-
-
+  [(ratio-fe-terr.) (per-tot-inc.) (per-tot-terr.) (tot-e-pods.) (ratio-fe-pods.) (ratio-ne-terr.) (ratio-nf-terr.)
+   ])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY OUTPUTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftype importance []
-  fuzz-out
-  (fo-key [fuzzo] :importance)
-  (ideal-val [fuzzo] {:lo 0
-                      :hi 5})
-  (crisp-it [fuzzo m] (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzzo))
+(defn gen-crisp
+  [fuzzo m]
+  (let [[vec model] (loop [kv-pairs (seq (ideal-val fuzzo))
                                                [actual ideal] [[] []]]
                                           (if (empty? kv-pairs)
                                             [actual ideal]
@@ -502,34 +504,97 @@ unreachable from another node, the distance between the nodes is -1."
                                                      [(conj actual (if act-val act-val 0))
                                                       (conj ideal ideal-val)]))
                                             ))]
-                        (dot (normalize vec) model))))
+    (dot (normalize vec) model)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; banker advisor output
+(deftype banker-inf []
+  fuzz-out
+  (fo-key [fuzzo] :banker-inf)
+  (ideal-val [fuzzo] {:lo 10
+                      :hi 40})
+  (crisp-it [fuzzo m] (gen-crisp fuzzo m)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; unit advisor output
+(deftype unit-f-inf []
+  fuzz-out
+  (fo-key [fuzzo] :unit-f-inf)
+  (ideal-val [fuzzo] {:lo (- 100)
+                      :hi 20})
+  (crisp-it [fuzzo m] (gen-crisp fuzzo m)))
+
+(deftype unit-e-inf []
+  fuzz-out
+  (fo-key [fuzzo] :unit-e-inf)
+  (ideal-val [fuzzo] {:lo (- 50)
+                      :hi 50})
+  (crisp-it [fuzzo m] (gen-crisp fuzzo m)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; territory adviser output
+(deftype terr-f-inf []
+  fuzz-out
+  (fo-key [fuzzo] :terr-f-inf)
+  (ideal-val [fuzzo] {:lo 50
+                      :hi (- 100)})
+  (crisp-it [fuzzo m] (gen-crisp fuzzo m)))
+
+(deftype terr-e-inf []
+  fuzz-out
+  (fo-key [fuzzo] :terr-e-inf)
+  (ideal-val [fuzzo] {:lo 50
+                      :hi (- 200)})
+  (crisp-it [fuzzo m] (gen-crisp fuzzo m)))
+
 
 (defn get-fuzzy-outputs
   "Returns seq of fuzzy outputs to be used."
   []
-  [(importance.)])
-
+  [(banker-inf.)
+   (unit-f-inf.)
+   (unit-e-inf.)
+   (terr-f-inf.)
+   (terr-e-inf.)
+   ])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; FUZZY EXPERT RULES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (deftype cont-priority []
     fuzz-rules
-  (premise [fuzzr] [[:per-tot-terr :low] [:per-tot-inc :high] [:ratio-fe-terr :high]])
-  (consequent [fuzzr] [[:importance :high]]))
+  (premise [fuzzr] [[:per-tot-terr :lo] [:per-tot-inc :hi] [:ratio-nf-terr :hi]])
+  (consequent [fuzzr] [[:banker-inf :hi]]))
+
+(deftype avoid-small-cont []
+    fuzz-rules
+  (premise [fuzzr] [[:per-tot-terr :lo] [:per-tot-inc :lo]])
+  (consequent [fuzzr] [[:terr-f-inf :lo] [:terr-e-inf :lo]]))
+
+(deftype dont-lose-asia []
+    fuzz-rules
+  (premise [fuzzr] [[:per-tot-terr :hi] [:ratio-fe-terr :lo]])
+  (consequent [fuzzr] [[:terr-f-inf :hi] [:unit-f-inf :hi] [:terr-e-inf :hi] [:unit-e-inf :lo]]))
+
+(deftype take-undefended-cont []
+    fuzz-rules
+  (premise [fuzzr] [[:ratio-fe-pods :hi] [:ratio-ne-terr :hi]])
+  (consequent [fuzzr] [[:terr-e-inf :hi] [:unit-f-inf :hi] ]))
+
+(deftype start-strong []
+    fuzz-rules
+  (premise [fuzzr] [[:ratio-nf-terr :hi] [:ratio-ne-terr :hi]])
+  (consequent [fuzzr] [[:banker-inf :hi] [:terr-e-inf :hi] [:unit-e-inf :hi] [:unit-f-inf :hi]]))
+
+(deftype hunt-and-kill []
+    fuzz-rules
+  (premise [fuzzr] [[:ratio-fe-terr :hi] [:ratio-fe-pods :hi]])
+  (consequent [fuzzr] [[:banker-inf :lo] [:terr-e-inf :hi] [:unit-e-inf :hi] [:unit-f-inf :hi]]))
 
 (defn get-fuzzy-rules
   "Returns seq of fuzzy rules to be used."
   []
-  [(cont-priority.)])
-
+  [(cont-priority.) (avoid-small-cont.) (dont-lose-asia.) (start-strong.) (hunt-and-kill.);;(take-undefended-cont.)
+   ])
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (def shortest-paths (atom {})) ;;map of paths sorted by shortest distance from each starting node
-
 (declare reset-world)
-
-(declare get-shortest-path)
 (declare find-short-paths)
 (declare nearby-nodes)
 
@@ -569,7 +634,6 @@ unreachable from another node, the distance between the nodes is -1."
                   ;;get all bordering node ids
                   (map last (next (nearby-nodes 2 0))))))))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WORLD NAVIGATION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn find-short-paths
   [graph num-nodes]
@@ -594,6 +658,11 @@ unreachable from another node, the distance between the nodes is -1."
   "Taking in a scalar world returns the global minimum"
   [world]
   (first (sort-by #(:scalar-value %) world)))
+
+(defn safe-global-min
+  [world pid]
+  (first (filter #(or (= pid (:owner %))
+               (= (- 1) (:owner %)))  (sort-by #(:scalar-value %) world))))
 
 (defn get-local-min
   "Returns the lowest point within a given radius of the world from a given node id."
@@ -638,10 +707,9 @@ unreachable from another node, the distance between the nodes is -1."
                    (conj (nth acc-continents cont-contains) (first nodes)))
                  (next nodes)))))))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ADVISORS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def banker-inf (atom 2))
+;; (def banker-inf (atom 2))
 (def noise-inf (atom 1))
 (def unit-inf (atom 1))
 (def territory-inf (atom 1))
@@ -654,31 +722,21 @@ unreachable from another node, the distance between the nodes is -1."
 (defprotocol advisor
   "Protocol for evaluating board."
   (title [adv] "Name of advisor")
-  (evaluate [adv node p1] "Returns source value for the node")
-  (influence [adv] [adv adjust] "Returns advisors influence, possibly adjusting that level")
-  )
+  (evaluate [adv node p1 inf] "Returns source value for the node")
+  (influence [adv] [adv adjust] "Returns advisors influence, possibly adjusting that level"))
 
 (deftype banker []
   advisor
   (title [adv] "Banker")
-  (evaluate [adv node p1]
-    ;; (- (* @banker-inf (/ 1 (- 8 (:income node)))))
-    (* @banker-inf (- (:income node))))
+  (evaluate [adv node p1 inf]
+    (* (nth inf 0) (- (:income node))))
   (influence [adv] @banker-inf)
   (influence [adv adjust] (swap! banker-inf #(+ % adjust))))
-
-(deftype noise []
-  advisor
-  (title [adv] "Noise")
-  (evaluate [adv node p1]
-    (rand-int 3))
-  (influence [adv] @noise-inf)
-  (influence [adv adjust] (swap! noise-inf #(+ % adjust))))
 
 (deftype unit []
   advisor
   (title [adv] "Unit")
-  (evaluate [adv node p1]
+  (evaluate [adv node p1 inf]
     (loop [player-pods (:pods node)
            p-id 0
            acc 0]
@@ -688,8 +746,8 @@ unreachable from another node, the distance between the nodes is -1."
          (next player-pods)
          (inc p-id)
          (if (= p-id (:id p1)) ;;process friendly pods different than enemy pods
-           (+ acc (* ((:pods node) p-id) @friendly-constant))
-           (+ acc (* ((:pods node) p-id) @enemy-constant))))
+           (+ acc (* ((:pods node) p-id) (first inf)))
+           (+ acc (* ((:pods node) p-id) (second inf)))))
         acc)))
   (influence [adv] @unit-inf)
   (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
@@ -697,10 +755,10 @@ unreachable from another node, the distance between the nodes is -1."
 (deftype territory []
   advisor
   (title [adv] "Territory")
-  (evaluate [adv node p1]
+  (evaluate [adv node p1 inf]
     (if (= (:id p1) (:owner node))
-      @friendly-terr-constant
-      @enemy-terr-constant))
+      (nth inf 0)
+      (nth inf 1)))
   (influence [adv] @unit-inf)
   (influence [adv adjust] (swap! unit-inf #(+ % adjust))))
 
@@ -713,9 +771,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn advise
   "Returns the world with source and scalar values modified by advisors."
   [world p1 advisors near-radius ai conts]
-  ;; (println "GETTING ADVICE ON WORLD: " world)
-  ;; (println "GETTING ADVICE ON AI " ai)
-  ;; (println "GETTING ADVICE ON CONTS " (sort-by second conts))
   (let [num-nodes (count world)
         source-world
         ;;modify all source values
@@ -733,7 +788,7 @@ unreachable from another node, the distance between the nodes is -1."
                                  ;;get more advice for node
                                  (recur (next adv)
                                         (next inf)
-                                        (+ acc (evaluate (first adv) (wor next-node) p1))))))
+                                        (+ acc (evaluate (first adv) (wor next-node) p1 (first inf)))))))
                    (inc next-node))))]
     ;;modify all scalar values
     (loop [acc source-world
@@ -751,27 +806,27 @@ unreachable from another node, the distance between the nodes is -1."
 
 (defn point-mod
   "Modifies a specific node and nearby nodes in a given radius"
-  [world p1 node advisors near-radius]
-  ;; (println "Calling point-mod")
-  (let [source-mod
+  [world p1 node advisors near-radius ai conts]
+(let [source-mod
         (loop [adv advisors
+               inf (ai (conts (:id node)))
                acc 0]
           (if (= nil adv)
             acc ;;gathered adjustment for each advisor return total
             ;;get more advice for node
             (recur
              (next adv)
+             (next inf)
              (+ acc
                 (evaluate
                  (first adv)
                  (nth world (:id node))
-                 p1)))))
+                 p1
+                 (first inf))))))
         ;;modify the source value for the node
         source-world (assoc-in world
                                [(:id node) :source-value]
                                source-mod)]
-    ;; (println "source-mod: " source-mod)
-    ;; (println "source-world: " source-world)
     ;;modify the scalar value for all near nodes
     (loop [world source-world
            nodes (map last (nearby-nodes near-radius (:id node))) ;;list of surrounding node ids
@@ -793,10 +848,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn move-mod
   "TODO Returns how the would would appear if x pods were moved from p1 to p2."
   [x p1 p2 world])
-
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PLAYER ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def next-id (atom -1))
@@ -832,9 +883,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn quant-node
   "Updates the accumulated stats with information from the node."
   [node stats pid]
-
- ;; (println (str "NODE OWNER: " (node :owner)))
-
   (if (= (node :owner) pid)
     ;;node is friendly, update stats
     (as-> stats %
@@ -862,10 +910,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn quant-continent
   "Returns a map with quantitative information about a continent."
   [world cont pid]
-;;   (if (> 1 (rand-int 20))
-;;     (println (str "WORLD:
-;; " world))
-;;     )
   ;;get the list of nodes in the continent but with the most up-to-date information from world.
   (let [updated-cont (loop [nodes cont
                             acc []]
@@ -875,8 +919,6 @@ unreachable from another node, the distance between the nodes is -1."
                                new-node (nth world (:id old-node))]
                            (recur (next nodes)
                                   (conj acc new-node)))))]
-;;     (println (str "WORLD:
-;; " world))
     ;;for every node in the continent gather stats to be returned later
     (loop [nodes updated-cont
            acc-stats {:tot-f-terr 0 ;;total friendly territory
@@ -936,23 +978,22 @@ unreachable from another node, the distance between the nodes is -1."
 
 
 
-
 (defn det-move
   "Returns a vector of vectors that represent how pods should be moved to their local minima. Does not combine information."
-  [sight p1 world]
+  [sight p1 world ai conts]
   (loop [i 0
-         pods (:pods p1)
-         outer-acc []]
-    (if (empty? pods)
-      outer-acc ;;return moves
-      (recur (inc i)
-             (next pods)
-             (reduce conj outer-acc (loop [pods-remaining (first pods)
-                                           inner-world world
-                                           acc []]
-                                      (if (< 0 pods-remaining)
-                                        ;;get shortest path
-                                        (let [minima (second
+           pods (:pods p1)
+           outer-acc []]
+      (if (empty? pods)
+        outer-acc ;;return moves
+        (recur (inc i)
+               (next pods)
+               (reduce conj outer-acc (loop [pods-remaining (first pods)
+                                             inner-world world
+                                             acc []]
+                                        (if (< 0 pods-remaining)
+                                          ;;get shortest path
+                                          (let [minima (second
                                                       ;;get shortest path
                                                       (get-shortest-path i ;;pods current position
                                                                          ;;get node id of local minima
@@ -960,29 +1001,29 @@ unreachable from another node, the distance between the nodes is -1."
                                                                                              i
                                                                                              inner-world))))
                                               next-node (if (nil? minima) i minima)]
-                                          (recur (dec pods-remaining)
-                                                 (point-mod inner-world p1 (nth inner-world next-node) (get-advisors) standard-radius)
-                                                 (conj acc [1 i next-node])))
-                                        acc)))))))
+                                            (recur (dec pods-remaining)
+                                                   (point-mod inner-world p1 (nth inner-world next-node) (get-advisors) standard-radius ai conts)
+                                                   (conj acc [1 i next-node])))
+                                          acc)))))))
 
 
 
 (defn det-place
   "Determines where to place units. Does not combine information"
-  [p1 world]
-  (let [filtered-world (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  world)] ;;world;;
-  ;; (println "Determining placement")
+  [p1 world ai conts]
   (loop [wor world
          pods (int (/ (:platinum p1) pod-cost))
          acc []]
     (if (= 0 pods)
       acc
       ;;recur with point modified map and one less pod
-      (let [global-min (get-global-min (filter #(or (= (:owner %) (- 1)) (= (:owner %) (:id p1)))  wor))]
-        (recur (point-mod wor p1 global-min (get-advisors) standard-radius)
+      ;; (let [global-min (get-global-min wor)]
+      (let [global-min (safe-global-min wor (:id p1))]
+        (recur (point-mod wor p1 global-min (get-advisors) standard-radius ai conts)
                (dec pods) ;;decrease pods available by 1
                ;;place a pod at global minima
-               (conj acc [1 (:id global-min)])))))))
+               (conj acc [1 (:id global-min)]))))))
+
 
 (defn comp-move
   "Compares if two move vectors can be combined, returns the combination if so."
@@ -1004,7 +1045,6 @@ unreachable from another node, the distance between the nodes is -1."
   [vectors]
   (loop [acc [(first (sort-by second vectors))]
          v (next (sort-by second vectors))]
-    ;; (println acc)
     (if (empty? v)
       acc
       (recur (reduce conj (reduce conj [] (butlast acc)) ((if (= 3 (count (first vectors))) comp-move comp-place ) (last acc) (first v)) )
@@ -1013,8 +1053,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn v-to-msg
   "Converts a vector into a string message."
   [vector]
-;;   (if (= 0 (rand-int 5)) (println "Printing test:
-;; " vector))
   (loop [acc ""
          v vector]
     (if (empty? v)
@@ -1025,7 +1063,6 @@ unreachable from another node, the distance between the nodes is -1."
 (defn gen-move-message
   "Returns a string to move units."
   [unit-move-vector]
-  ;; (if (= 0 (rand-int 5)) (println unit-move-vector))
   (if (or (empty? unit-move-vector) (= nil (first unit-move-vector)))
     "WAIT"
     (v-to-msg (combine-vectors unit-move-vector))))
@@ -1037,8 +1074,54 @@ unreachable from another node, the distance between the nodes is -1."
     "WAIT"
     (v-to-msg (combine-vectors unit-place-vector))))
 
+(defn crisp-to-ai-weights
+  "Turns output from defuzzification into ai weights"
+  [m]
+  [[(:banker-inf m)]
+   [(:unit-f-inf m)
+    (:unit-e-inf m)]
+   [(:terr-f-inf m)
+     (:terr-e-inf m)]])
+
+(defn cont-to-fuzz-map
+  "Turns continent evaluation map into something that fuzzy inputs can process."
+  [cont world-stats]
+  ;;return a vector of numbers for the fuzzy inputs, needs to be in the same order as returned from (fuzzy/get-fuzzy-inputs)
+  [;;ratio-fe-terr
+   (/ (:tot-f-terr cont) (inc (:tot-e-terr cont)))
+   ;;per-tot-inc
+   (/ (+ (:tot-f-inc cont) (:tot-e-inc cont) (:tot-n-inc cont)) (:tot-inc world-stats))
+   ;;per-tot-terr
+   (/ (+ (:tot-f-terr cont) (:tot-e-terr cont) (:tot-n-terr cont)) (:tot-terr world-stats))
+   (:tot-e-pods cont)
+   (/ (:tot-f-pods cont) (inc (:tot-e-pods cont)))
+   (/ (:tot-n-terr cont) (inc (:tot-e-terr cont)))
+   (/ (:tot-n-terr cont) (inc (:tot-f-terr cont)))
+   ;;(:tot-f-terr cont)
+   ])
 
 
+(defn update-ai-weights
+  "Returns new set of ai weights after applying fuzzy logic to continent evaulations."
+  [cont-quants world-stats]
+  (loop [conts cont-quants
+         acc []]
+    (if (empty? conts)
+      acc
+      (recur (next conts)
+             (conj acc (as-> (cont-to-fuzz-map (first conts) world-stats) %
+                   ;;fuzzification
+                   (map fuzz-it (get-fuzzy-inputs) %)
+                   ;;turn into single map for inference step
+                   (reduce conj  {} %)
+                   ;;inference
+                   (inference (get-fuzzy-rules) %)
+                   ;;composition
+                   (composition %)
+                   ;;defuzzification
+                   (defuzzification (get-fuzzy-outputs) %)
+                   ;;get ai weight vector
+                   (crisp-to-ai-weights %)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; AI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn create-players
   "Returns a list of players"
@@ -1096,29 +1179,19 @@ unreachable from another node, the distance between the nodes is -1."
                                   (if (empty? nodes)
                                     inner-acc
                                     (recur (next nodes)
-                                           (assoc inner-acc (:id (first nodes)) next-cont)))))))]
+                                           (assoc inner-acc (:id (first nodes)) next-cont)))))))
+          world-stats {:tot-inc 120
+                       :tot-terr zoneCount}]
       (swap! shortest-paths (fn [_] short-paths))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AI LOGIC;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       (while true
         (loop [turn 1
-               ai-weights [[1 1 [1 1] [1 1] [1 1]]
-                           [1 1 [1 1] [1 1] [1 1]]
-                           [1 1 [1 1] [1 1] [1 1]]
-                           [1 1 [1 1] [1 1] [1 1]]
-                           [1 1 [1 1] [1 1] [1 1]]]
                turn-world node-world
                turn-players (let [platinum (read)] (assoc-in players [myId :platinum] platinum))]
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-          ;;verify AI view of world matches actual world
-          ;; (check-world (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) @s-world)
-          ;;              (map (fn [node] (dissoc (dissoc node :total-liberties) :income)) world))
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END TODO REMOVE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
           ;;basic turn structure
           (recur (inc turn)
-                 ai-weights
                  (loop [i zoneCount
                         new-world turn-world
                         new-players turn-players]
@@ -1144,9 +1217,10 @@ unreachable from another node, the distance between the nodes is -1."
                                                       (assoc-in (first players) [:pods zId] (first pods-vec))))))))
                      ;;on last iteration, determine where to move and place units
                      (let [quant-cont (quant-world new-world conts myId)
+                           ai-weights (update-ai-weights quant-cont world-stats)
                            advised-world (advise new-world (nth turn-players myId) (get-advisors) sight-radius ai-weights conts-lookup-map)
-                           movement (.trim (gen-move-message (det-move sight-radius (nth new-players myId) advised-world)))
-                           placement (.trim (gen-place-message (det-place (nth new-players myId) advised-world)))]
+                           movement (.trim (gen-move-message (det-move sight-radius (nth new-players myId) advised-world ai-weights conts-lookup-map)))
+                           placement (.trim (gen-place-message (det-place (nth new-players myId) advised-world ai-weights conts-lookup-map)))]
                        ;;send commands
                        (println movement)
                        (println placement)

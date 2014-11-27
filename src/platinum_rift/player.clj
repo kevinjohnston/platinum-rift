@@ -2,7 +2,8 @@
   (:require [platinum-rift.world :as world]
             [platinum-rift.constants :refer :all]
             [platinum-rift.mimic :refer :all] ;;refer so we won't need to specify namespace just like in the real game
-            [platinum-rift.advisors :as advisors]))
+            [platinum-rift.advisors :as advisors]
+            [platinum-rift.fuzzy :as fuzzy]))
 
 
 (def next-id (atom -1))
@@ -48,31 +49,10 @@
   ;;todo make this useful
   (+ (:platinum p1) (reduce + (:pods p1)) (:income p1) (- (:liberties p1))  (:territories p1)))
 
-
-
-;; (let [world [{:id 0 :stuff 0} {:id 1} {:id 2}]
-;;       conts [[{:id 0 :stuff nil} {:id 2}] [{:id 1}]]
-;;       some-cont (first conts)]
-;;   (loop [nodes some-cont
-;;          acc []]
-;;     (if (empty? nodes)
-;;       acc
-;;       (let [old-node (first nodes)
-;;             new-node (nth world (:id old-node))
-
-;;             ] (recur (next nodes)
-;;                    (conj acc new-node)
-
-;;              ))
-;;       )
-;;     )
-
-;;   )
-
 (defn quant-node
   "Updates the accumulated stats with information from the node."
   [node stats pid]
-(println (str "NODE OWNER: " (node :owner)))
+;; (println (str "NODE OWNER: " (node :owner)))
   (if (= (node :owner) pid)
     ;;node is friendly, update stats
     (as-> stats %
@@ -109,8 +89,8 @@
                                new-node (nth world (:id old-node))]
                            (recur (next nodes)
                                   (conj acc new-node)))))]
-    (println (str "WORLD:
-" world))
+;;     (println (str "WORLD:
+;; " world))
     ;;for every node in the continent gather stats to be returned later
     (loop [nodes updated-cont
            acc-stats {:tot-f-terr 0 ;;total friendly territory
@@ -265,3 +245,100 @@
   (if (or (empty? unit-place-vector) (= nil (first unit-place-vector)))
     "WAIT"
     (v-to-msg (combine-vectors unit-place-vector))))
+
+(defn crisp-to-ai-weights
+  "Turns output from defuzzification into ai weights"
+  [m]
+  ;; (list (banker.) (unit.) (territory.))
+  (println "CRISP INPUT:
+ " m)
+  [[(:banker-inf m)]
+   [(:unit-f-inf m)
+    (:unit-e-inf m)]
+   [(:terr-f-inf m)
+     (:terr-e-inf m)]]
+  )
+
+(defn cont-to-fuzz-map
+  "Turns continent evaluation map into something that fuzzy inputs can process."
+  [cont world-stats]
+  ;;return a vector of numbers for the fuzzy inputs, needs to be in the same order as returned from (fuzzy/get-fuzzy-inputs)
+  [;;ratio-fe-terr
+   (/ (:tot-f-terr cont) (inc (:tot-e-terr cont)))
+   ;;per-tot-inc
+   (/ (+ (:tot-f-inc cont) (:tot-e-inc cont) (:tot-n-inc cont)) (:tot-inc world-stats))
+   ;;per-tot-terr
+   (/ (+ (:tot-f-terr cont) (:tot-e-terr cont) (:tot-n-terr cont)) (:tot-terr world-stats))
+   (:tot-e-pods cont)
+   (/ (:tot-f-pods cont) (inc (:tot-e-pods cont)))
+   (/ (:tot-n-terr cont) (inc (:tot-e-terr cont)))
+   (/ (:tot-n-terr cont) (inc (:tot-f-terr cont)))
+;;   (:tot-f-terr cont)
+   ])
+
+(defn update-ai-weights
+  "Returns new set of ai weights after applying fuzzy logic to continent evaulations."
+  [cont-quants world-stats]
+  (let [ret (loop [conts cont-quants
+         acc []]
+    (if (empty? conts)
+      acc
+      (recur (next conts)
+             ;;get continents ai weights
+             (conj acc (->> (cont-to-fuzz-map (first conts) world-stats)
+                  ;;fuzzification
+                  (map fuzzy/fuzz-it (fuzzy/get-fuzzy-inputs) )
+                  ;;turn into single map for inference step
+                  (reduce conj {} )
+                  ;;inference
+                  (fuzzy/inference (fuzzy/get-fuzzy-rules) )
+                  ;;composition
+                  (fuzzy/composition )
+                  ;;defuzzification
+                  (fuzzy/defuzzification (fuzzy/get-fuzzy-outputs) )
+                  ;;get ai weight vector
+                  (crisp-to-ai-weights))))))
+        ]
+
+    (println "acc:
+" ret)
+    ret)
+  )
+
+;; ;;inference
+;; (fuzzy/inference {} ())
+;; ;;composition
+;; (fuzzy/composition {})
+;; ;;defuzzification
+;; (fuzzy/defuzzification {} ())
+
+;; (crisp-to-ai-weights)
+
+
+
+;; (let [fuzzy-input-map {}])
+;; (loop [conts cont-quants]
+;;      (kv-pair (fuzzy/get-fuzzy-inputs) (first conts))
+
+;;   )
+;; (->> cont
+;;      (kv-pair (fuzzy/get-fuzzy-inputs))
+;;      (kv-pair (fuzzy/get-fuzzy-inputs))
+
+;;      )
+;; ;;fuzzification
+;; ;;inference
+;; ;;composition
+;; ;;defuzzification
+
+;; (fuzzy/get-fuzzy-rules)
+;; (fuzzy/get-fuzzy-outputs)
+;; (reduce conj {} [[:key :val] [:key :val] [:key3 :val3]])
+
+
+
+
+
+;;   (println (str "CRISP TO AI:
+  ;; " m))
+  ;;[1 1 [1 1]]
